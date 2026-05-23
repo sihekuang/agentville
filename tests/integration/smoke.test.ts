@@ -5,7 +5,7 @@ import os from "os";
 import { discoverSessions } from "@/lib/sessions";
 import { parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcript";
 import { identifyAppFromProcessName } from "@/lib/host-app";
-import { buildFocusScript } from "@/lib/platform/macos";
+import { resolveAppNames } from "@/lib/platform/macos";
 import { useAgentStore } from "@/store/agents";
 
 describe("integration: full pipeline", () => {
@@ -62,14 +62,10 @@ describe("integration: full pipeline", () => {
       name: "iTerm2",
     });
 
-    // 7. Test focus script building
-    const script = buildFocusScript({
-      type: "terminal",
-      name: "iTerm2",
-      pid: 123,
-      cwd: "/test",
-    });
-    expect(script).toContain("activate");
+    // 7. Test app name resolution for focus
+    const { appName, processName } = resolveAppNames("iTerm2");
+    expect(appName).toBe("iTerm2");
+    expect(processName).toBe("iTerm2");
 
     // 8. Populate store
     const store = useAgentStore.getState();

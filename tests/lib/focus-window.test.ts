@@ -1,37 +1,40 @@
-import { describe, it, expect, vi } from "vitest";
-import { buildFocusScript } from "@/lib/platform/macos";
+import { describe, it, expect } from "vitest";
+import { resolveAppNames } from "@/lib/platform/macos";
 
-describe("buildFocusScript", () => {
-  it("builds AppleScript for a terminal app", () => {
-    const script = buildFocusScript({
-      type: "terminal",
-      name: "iTerm2",
-      pid: 123,
-      cwd: "/Users/test",
-    });
-    expect(script).toContain("iTerm2");
-    expect(script).toContain("activate");
+describe("resolveAppNames", () => {
+  it("maps VS Code to the correct app and process names", () => {
+    const { appName, processName } = resolveAppNames("VS Code");
+    expect(appName).toBe("Visual Studio Code");
+    expect(processName).toBe("Code");
   });
 
-  it("builds AppleScript for an IDE", () => {
-    const script = buildFocusScript({
-      type: "ide",
-      name: "VS Code",
-      pid: 456,
-      cwd: "/Users/test/project",
-    });
-    expect(script).toContain("Visual Studio Code");
-    expect(script).toContain("activate");
+  it("maps iTerm2 to itself for both names", () => {
+    const { appName, processName } = resolveAppNames("iTerm2");
+    expect(appName).toBe("iTerm2");
+    expect(processName).toBe("iTerm2");
   });
 
-  it("builds AppleScript for Terminal.app", () => {
-    const script = buildFocusScript({
-      type: "terminal",
-      name: "Terminal",
-      pid: 789,
-      cwd: "/Users/test",
-    });
-    expect(script).toContain("Terminal");
-    expect(script).toContain("activate");
+  it("maps Terminal to itself for both names", () => {
+    const { appName, processName } = resolveAppNames("Terminal");
+    expect(appName).toBe("Terminal");
+    expect(processName).toBe("Terminal");
+  });
+
+  it("maps Cursor to itself for both names", () => {
+    const { appName, processName } = resolveAppNames("Cursor");
+    expect(appName).toBe("Cursor");
+    expect(processName).toBe("Cursor");
+  });
+
+  it("maps JetBrains IDEs correctly", () => {
+    const { appName, processName } = resolveAppNames("IntelliJ IDEA");
+    expect(appName).toBe("IntelliJ IDEA");
+    expect(processName).toBe("IntelliJ IDEA");
+  });
+
+  it("passes unknown app names through unchanged", () => {
+    const { appName, processName } = resolveAppNames("SomeNewApp");
+    expect(appName).toBe("SomeNewApp");
+    expect(processName).toBe("SomeNewApp");
   });
 });

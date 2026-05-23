@@ -13,10 +13,12 @@ interface AgentSpriteProps {
   x: number;
   y: number;
   sessionId: string;
+  cwd: string;
   currentAction: AgentAction;
   status: "busy" | "idle";
   animConfig: AgentAnimationConfig;
   onClick: (sessionId: string) => void;
+  onDoubleClick: (sessionId: string) => void;
   isSelected: boolean;
   isDark: boolean;
 }
@@ -24,13 +26,25 @@ interface AgentSpriteProps {
 function makeStyles(isDark: boolean) {
   return {
     label: new TextStyle({
-      fontSize: 8,
-      fill: isDark ? 0xffffff : 0x222222,
+      fontSize: 5,
+      fill: isDark ? 0x999999 : 0x888888,
       fontFamily: "monospace",
       align: "center",
     }),
     selectedLabel: new TextStyle({
-      fontSize: 8,
+      fontSize: 5,
+      fill: isDark ? 0xccaa00 : 0xaa7700,
+      fontFamily: "monospace",
+      align: "center",
+    }),
+    dirLabel: new TextStyle({
+      fontSize: 7,
+      fill: isDark ? 0xffffff : 0x222222,
+      fontFamily: "monospace",
+      align: "center",
+    }),
+    selectedDirLabel: new TextStyle({
+      fontSize: 7,
       fill: isDark ? 0xffff00 : 0xcc8800,
       fontFamily: "monospace",
       align: "center",
@@ -59,16 +73,27 @@ export function AgentSprite({
   x,
   y,
   sessionId,
+  cwd,
   currentAction,
   status,
   animConfig,
   onClick,
+  onDoubleClick,
   isSelected,
   isDark,
 }: AgentSpriteProps) {
+  const lastClickRef = useRef(0);
+
   const handleClick = useCallback(() => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 400) {
+      onDoubleClick(sessionId);
+      lastClickRef.current = 0;
+      return;
+    }
+    lastClickRef.current = now;
     onClick(sessionId);
-  }, [onClick, sessionId]);
+  }, [onClick, onDoubleClick, sessionId]);
 
   const texture = useTexture(animConfig.src);
 
@@ -79,7 +104,7 @@ export function AgentSprite({
       -animConfig.frameWidth / 2 - 4,
       -animConfig.frameHeight / 2 - 4,
       animConfig.frameWidth + 8,
-      animConfig.frameHeight + 20,
+      animConfig.frameHeight + 28,
     ),
     [animConfig.frameWidth, animConfig.frameHeight],
   );
@@ -106,6 +131,7 @@ export function AgentSprite({
   });
 
   const label = sessionId.slice(0, 6);
+  const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
   const tint = status === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);
 
@@ -128,10 +154,16 @@ export function AgentSprite({
         />
       )}
       <pixiText
+        text={dirName}
+        style={isSelected ? styles.selectedDirLabel : styles.dirLabel}
+        anchor={0.5}
+        y={animConfig.frameHeight / 2 + 6}
+      />
+      <pixiText
         text={label}
         style={isSelected ? styles.selectedLabel : styles.label}
         anchor={0.5}
-        y={animConfig.frameHeight / 2 + 6}
+        y={animConfig.frameHeight / 2 + 14}
       />
       {status === "busy" && emote && (
         <pixiText

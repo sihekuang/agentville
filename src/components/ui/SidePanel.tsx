@@ -3,6 +3,7 @@
 import { useAgentStore } from "@/store/agents";
 import { StatusBadge } from "./StatusBadge";
 import { ActionList } from "./ActionList";
+import { ACTIVITY_LEGEND } from "./Header";
 
 export function SidePanel() {
   const agents = useAgentStore((s) => s.agents);
@@ -11,7 +12,48 @@ export function SidePanel() {
 
   const agent = selectedAgentId ? agents[selectedAgentId] : null;
 
-  if (!agent) return null;
+  if (!agent) {
+    return (
+      <div className="bg-card flex flex-col h-full overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-sm font-bold text-foreground">AgentVille</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Click an agent to see its activity.
+            <br />
+            Double-click to focus its window.
+          </p>
+        </div>
+        <div className="p-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">
+            Activity Legend
+          </h3>
+          <div className="space-y-2">
+            {ACTIVITY_LEGEND.map((item) => (
+              <div key={item.label} className="flex items-center gap-2 text-sm text-foreground">
+                <span className="w-6 text-center text-base">{item.emoji}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-4 border-t border-border mt-auto">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+            Status Indicators
+          </h3>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+              Busy
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground" />
+              Idle (dimmed)
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleFocus = async () => {
     try {

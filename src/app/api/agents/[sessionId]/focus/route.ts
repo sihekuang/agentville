@@ -55,10 +55,12 @@ export async function POST(
     );
   }
 
-  const result = focusWindow(hostApp);
+  const projectHint = path.basename(hostApp.cwd);
+  const result = focusWindow(hostApp, projectHint);
 
   return NextResponse.json({
     success: result.success,
+    windowTitle: result.windowTitle ?? null,
     hostApp: { type: hostApp.type, name: hostApp.name },
   });
 }

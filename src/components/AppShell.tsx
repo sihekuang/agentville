@@ -1,9 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
 import { useAgentStream } from "@/hooks/use-agent-stream";
-import { useAgentStore } from "@/store/agents";
 import { Header } from "./ui/Header";
 import { SidePanel } from "./ui/SidePanel";
 import {
@@ -11,7 +9,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "./ui/resizable";
-import type { PanelImperativeHandle } from "react-resizable-panels";
 
 const AgentVilleScene = dynamic(
   () =>
@@ -23,16 +20,6 @@ const AgentVilleScene = dynamic(
 
 export function AppShell() {
   useAgentStream();
-  const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
-  const sidePanelRef = useRef<PanelImperativeHandle>(null);
-
-  useEffect(() => {
-    if (selectedAgentId) {
-      sidePanelRef.current?.expand();
-    } else {
-      sidePanelRef.current?.collapse();
-    }
-  }, [selectedAgentId]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -45,12 +32,9 @@ export function AppShell() {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel
-          panelRef={sidePanelRef}
           defaultSize="35%"
           minSize="20%"
           maxSize="60%"
-          collapsible
-          collapsedSize="0%"
         >
           <SidePanel />
         </ResizablePanel>

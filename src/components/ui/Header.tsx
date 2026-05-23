@@ -14,7 +14,7 @@ const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: "workshop", label: "Workshop" },
 ];
 
-const ACTIVITY_LEGEND: { emoji: string; label: string }[] = [
+export const ACTIVITY_LEGEND: { emoji: string; label: string }[] = [
   { emoji: "💭", label: "Thinking" },
   { emoji: "💬", label: "Writing" },
   { emoji: "📖", label: "Reading files" },

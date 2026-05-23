@@ -80,6 +80,10 @@ export function AgentVilleScene() {
     [selectAgent, selectedAgentId],
   );
 
+  const handleAgentDoubleClick = useCallback((sessionId: string) => {
+    fetch(`/api/agents/${sessionId}/focus`, { method: "POST" }).catch(() => {});
+  }, []);
+
   const sceneWidth = dynamicTheme.gridCols * dynamicTheme.tileSize;
   const sceneHeight = dynamicTheme.gridRows * dynamicTheme.tileSize;
 
@@ -102,10 +106,12 @@ export function AgentVilleScene() {
                 x={slot.x * dynamicTheme.tileSize}
                 y={slot.y * dynamicTheme.tileSize}
                 sessionId={agent.sessionId}
+                cwd={agent.cwd}
                 currentAction={agent.currentAction}
                 status={agent.status}
                 animConfig={dynamicTheme.agent}
                 onClick={handleAgentClick}
+                onDoubleClick={handleAgentDoubleClick}
                 isSelected={selectedAgentId === agent.sessionId}
                 isDark={isDark}
               />
