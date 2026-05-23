@@ -68,26 +68,67 @@ function runScript(scriptName: string, args: string[]): string {
 }
 
 export class MacOSStrategy implements PlatformStrategy {
-  focusWindow(hostApp: HostApp, projectHint?: string): FocusResult {
+  private resolveWarpTabIndex(agentPid: number, warpPid: number): number | null {
+    try {
+      const psOutput = execSync("ps -eo pid,ppid,tty,comm", {
+        encoding: "utf-8",
+      });
+
+      const agentTty = execSync(`ps -o tty= -p ${agentPid}`, {
+        encoding: "utf-8",
+      }).trim();
+      if (!agentTty || agentTty === "??") return null;
+
+      const warpTtys: string[] = [];
+      for (const line of psOutput.split("\n")) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 4) continue;
+        const ppid = parseInt(parts[1], 10);
+        const tty = parts[2];
+        if (ppid === warpPid && tty !== "??" && tty.startsWith("ttys")) {
+          if (!warpTtys.includes(tty)) warpTtys.push(tty);
+        }
+      }
+
+      warpTtys.sort();
+      const index = warpTtys.indexOf(agentTty);
+      return index >= 0 ? index + 1 : null;
+    } catch {
+      return null;
+    }
+  }
+
+  focusWindow(hostApp: HostApp, projectHint?: string, agentPid?: number): FocusResult {
     const appName = APP_NAME_MAP[hostApp.name] ?? hostApp.name;
     const processName = PROCESS_NAME_MAP[hostApp.name] ?? appName;
     const hint = projectHint ?? "";
 
     try {
-      let result: string;
+      if (hostApp.name === "Warp" && agentPid) {
+        const tabIndex = this.resolveWarpTabIndex(agentPid, hostApp.pid);
 
-      if (hostApp.name === "Warp") {
-        result = runScript("focus-warp-tab.applescript", [
-          hint,
-          hostApp.cwd,
-        ]);
-      } else {
-        result = runScript("focus-window.applescript", [
-          appName,
-          processName,
-          hint,
-        ]);
+        execFileSync("osascript", ["-e", 'tell application "Warp" to activate'], {
+          encoding: "utf-8",
+          timeout: 3000,
+        });
+
+        if (tabIndex && tabIndex <= 9) {
+          execFileSync("osascript", [
+            "-e",
+            `tell application "System Events" to keystroke "${tabIndex}" using command down`,
+          ], { encoding: "utf-8", timeout: 3000 });
+
+          return { success: true, windowTitle: `tab ${tabIndex}` };
+        }
+
+        return { success: true };
       }
+
+      const result = runScript("focus-window.applescript", [
+        appName,
+        processName,
+        hint,
+      ]);
 
       if (result.startsWith("focused:")) {
         return { success: true, windowTitle: result.slice("focused:".length) };

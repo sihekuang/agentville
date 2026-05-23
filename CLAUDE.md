@@ -83,6 +83,15 @@ public/
   sprites/          # Pixel-art sprite sheets per theme
 ```
 
+## Focus Feature (macOS)
+
+The focus feature uses AppleScript files in `scripts/macos/` to activate and raise specific application windows. The host terminal/IDE running the dev server needs **Accessibility** permission in System Settings for window-level targeting (AXRaise) to work. Without it, focus falls back to simple app activation.
+
+- `focus-window.applescript` — activates app + raises matching window via System Events
+- `focus-warp-tab.applescript` — Warp-specific tab matching
+- `list-windows.applescript` — enumerates windows (title, index, bounds) as JSON
+- `get-window-bounds.applescript` — single window bounds lookup
+
 ## Testing
 
 ```bash

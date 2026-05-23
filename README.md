@@ -27,6 +27,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The app will automatically discover any running Claude Code sessions.
 
+### macOS Accessibility Permission
+
+The **Focus** feature uses AppleScript and System Events to raise the specific window matching an agent's project. For this to work, the app that runs the dev server (Terminal, iTerm2, Warp, VS Code, etc.) must be granted Accessibility access:
+
+1. Open **System Settings > Privacy & Security > Accessibility**
+2. Click **+** and add the terminal/IDE you use to run `npm run dev`
+
+Without this permission, clicking Focus will still activate the host application, but it won't be able to target the specific project window.
+
 ## Scripts
 
 | Command | Description |

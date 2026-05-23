@@ -56,7 +56,7 @@ export async function POST(
   }
 
   const projectHint = path.basename(hostApp.cwd);
-  const result = focusWindow(hostApp, projectHint);
+  const result = focusWindow(hostApp, projectHint, sessionFile.pid);
 
   return NextResponse.json({
     success: result.success,

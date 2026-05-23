@@ -19,7 +19,7 @@ export interface HighlightOptions {
 
 export interface PlatformStrategy {
   /** Focus a specific window of the host app, matching by project/cwd name */
-  focusWindow(hostApp: HostApp, projectHint?: string): FocusResult;
+  focusWindow(hostApp: HostApp, projectHint?: string, agentPid?: number): FocusResult;
 
   /** List all windows for a given application */
   listWindows(appName: string): WindowInfo[];
