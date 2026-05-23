@@ -1,68 +1,78 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
-import { discoverSessions, getTranscriptPath } from "@/lib/sessions";
-import {
-  parseTranscriptLine,
-  currentActionFromTranscript,
-} from "@/lib/transcript";
-import { resolveHostApp } from "@/lib/host-app";
-import type { AgentState, StreamEvent, TranscriptEntry } from "@/lib/types";
+import { getRegistry } from "@/lib/providers";
+import type { DiscoveredAgent } from "@/lib/providers";
+import type { AgentState, AgentAction, StreamEvent, TranscriptEntry } from "@/lib/types";
 
-const CLAUDE_HOME = path.join(process.env.HOME ?? "~", ".claude");
-const SESSIONS_DIR = path.join(CLAUDE_HOME, "sessions");
-const PROJECTS_DIR = path.join(CLAUDE_HOME, "projects");
 const POLL_INTERVAL = 2000;
-const MAX_RECENT_ACTIONS = 20;
 
-function buildAgentState(
-  session: Awaited<ReturnType<typeof discoverSessions>>[number]
-): AgentState {
-  const transcriptPath = getTranscriptPath(
-    PROJECTS_DIR,
-    session.cwd,
-    session.sessionId
-  );
+/** Map a NormalizedAction back to the legacy AgentAction type for the frontend */
+function toLegacyAction(
+  agent: DiscoveredAgent
+): { currentAction: AgentAction; lastToolName: string | null } {
+  const recent = agent.recentActivity;
+  const lastEntry = recent.length > 0 ? recent[recent.length - 1] : null;
 
-  let recentActions: TranscriptEntry[] = [];
-  if (transcriptPath) {
-    try {
-      const raw = fs.readFileSync(transcriptPath, "utf-8");
-      const lines = raw.split("\n").filter((l) => l.trim().length > 0);
-      const allEntries: TranscriptEntry[] = [];
-      for (const line of lines) {
-        const entry = parseTranscriptLine(line);
-        if (entry) allEntries.push(entry);
-      }
-      recentActions = allEntries.slice(-MAX_RECENT_ACTIONS);
-    } catch {
-      // transcript not available
-    }
+  // Derive lastToolName from the last activity entry if it was a tool use
+  const lastToolName =
+    lastEntry?.rawType === "tool_use" ? (lastEntry.rawToolName ?? null) : null;
+
+  // Map NormalizedAction back to Claude-specific AgentAction
+  let currentAction: AgentAction;
+  switch (agent.currentAction) {
+    case "reading":
+      currentAction = "tool:Read";
+      break;
+    case "editing":
+      // Check the raw tool name to distinguish Edit vs Write
+      currentAction =
+        lastToolName === "Write" ? "tool:Write" : "tool:Edit";
+      break;
+    case "executing":
+      currentAction = "tool:Bash";
+      break;
+    case "delegating":
+      currentAction = "tool:Agent";
+      break;
+    case "other":
+      currentAction = "tool:other";
+      break;
+    case "thinking":
+      currentAction = "thinking";
+      break;
+    case "writing":
+      currentAction = "writing";
+      break;
+    case "idle":
+    default:
+      currentAction = "idle";
+      break;
   }
 
-  const hostApp = resolveHostApp(
-    session.pid,
-    session.cwd,
-    session.sessionId
+  return { currentAction, lastToolName };
+}
+
+/** Bridge a provider-agnostic DiscoveredAgent to the legacy AgentState for the frontend */
+function toAgentState(agent: DiscoveredAgent): AgentState {
+  const { currentAction, lastToolName } = toLegacyAction(agent);
+
+  const recentActions: TranscriptEntry[] = agent.recentActivity.map(
+    (entry) => ({
+      timestamp: entry.timestamp,
+      type: (entry.rawType ?? entry.category) as TranscriptEntry["type"],
+      summary: entry.summary,
+    })
   );
 
   return {
-    sessionId: session.sessionId,
-    pid: session.pid,
-    cwd: session.cwd,
-    status: session.status,
-    currentAction:
-      session.status === "idle"
-        ? "idle"
-        : currentActionFromTranscript(recentActions),
-    lastToolName:
-      recentActions.length > 0 &&
-      recentActions[recentActions.length - 1].type === "tool_use"
-        ? recentActions[recentActions.length - 1].summary.split(" ")[0]
-        : null,
-    subagents: [],
-    hostApp,
-    startedAt: session.startedAt,
+    sessionId: agent.id,
+    pid: agent.pid,
+    cwd: agent.cwd,
+    status: agent.status,
+    currentAction,
+    lastToolName,
+    subagents: agent.subagents.map(toAgentState),
+    hostApp: agent.hostApp,
+    startedAt: agent.startedAt,
     recentActions,
   };
 }
@@ -75,19 +85,21 @@ export async function GET(): Promise<Response> {
     async start(controller) {
       const knownAgents = new Map<string, AgentState>();
 
+      const registry = getRegistry();
+
       const poll = async () => {
         if (cancelled) return;
 
         try {
-          const sessions = await discoverSessions(SESSIONS_DIR);
-          const currentIds = new Set(sessions.map((s) => s.sessionId));
+          const discovered = await registry.discoverAll();
+          const currentIds = new Set(discovered.map((a) => a.id));
 
-          for (const session of sessions) {
-            const agent = buildAgentState(session);
-            const existing = knownAgents.get(session.sessionId);
+          for (const discoveredAgent of discovered) {
+            const agent = toAgentState(discoveredAgent);
+            const existing = knownAgents.get(discoveredAgent.id);
 
             if (!existing) {
-              knownAgents.set(session.sessionId, agent);
+              knownAgents.set(discoveredAgent.id, agent);
               const event: StreamEvent = {
                 event: "agent-added",
                 agent,
@@ -100,7 +112,7 @@ export async function GET(): Promise<Response> {
               existing.currentAction !== agent.currentAction ||
               existing.recentActions.length !== agent.recentActions.length
             ) {
-              knownAgents.set(session.sessionId, agent);
+              knownAgents.set(discoveredAgent.id, agent);
               const event: StreamEvent = {
                 event: "agent-updated",
                 agent,

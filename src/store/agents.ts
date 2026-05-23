@@ -3,14 +3,20 @@ import type { AgentState } from "@/lib/types";
 
 export type Theme = "office" | "farm" | "workshop";
 
+/** Extended agent state that includes provider information */
+export interface TrackedAgent extends AgentState {
+  /** Which provider this agent came from (e.g., "claude-code") */
+  provider?: string;
+}
+
 interface AgentStore {
-  agents: Record<string, AgentState>;
+  agents: Record<string, TrackedAgent>;
   selectedAgentId: string | null;
   theme: Theme;
 
-  addAgent: (agent: AgentState) => void;
+  addAgent: (agent: AgentState | TrackedAgent) => void;
   removeAgent: (sessionId: string) => void;
-  updateAgent: (agent: AgentState) => void;
+  updateAgent: (agent: AgentState | TrackedAgent) => void;
   selectAgent: (sessionId: string | null) => void;
   setTheme: (theme: Theme) => void;
 }

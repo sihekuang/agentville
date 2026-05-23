@@ -1,3 +1,8 @@
+/**
+ * Claude Code-specific agent state.
+ * Legacy type kept for backwards compatibility with existing UI components.
+ * New code should use DiscoveredAgent from "@/lib/providers".
+ */
 export interface AgentState {
   sessionId: string;
   pid: number;
@@ -11,6 +16,11 @@ export interface AgentState {
   recentActions: TranscriptEntry[];
 }
 
+/**
+ * Claude Code-specific action type.
+ * Legacy type kept for backwards compatibility with existing UI components.
+ * New code should use NormalizedAction from "@/lib/providers".
+ */
 export type AgentAction =
   | "thinking"
   | "tool:Read"
