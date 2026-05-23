@@ -51,7 +51,10 @@ function buildAgentState(
     pid: session.pid,
     cwd: session.cwd,
     status: session.status,
-    currentAction: currentActionFromTranscript(recentActions),
+    currentAction:
+      session.status === "idle"
+        ? "idle"
+        : currentActionFromTranscript(recentActions),
     lastToolName:
       recentActions.length > 0 &&
       recentActions[recentActions.length - 1].type === "tool_use"

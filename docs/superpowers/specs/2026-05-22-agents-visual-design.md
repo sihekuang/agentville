@@ -1,11 +1,11 @@
-# Agents Visual — Design Spec
+# AgentVille — Design Spec
 
 **Date:** 2026-05-22
 **Status:** Approved
 
 ## Overview
 
-A local-first Next.js application that visualizes running Claude Code agents as pixel-art characters in a themed scene (office, farm, or workshop). Users can see what each agent is doing in real time, click on an agent to view details in a side panel, and focus the host terminal/IDE window where that agent is running.
+**AgentVille** is a local Next.js application that visualizes running Claude Code agents as pixel-art characters in a themed scene (office, farm, or workshop). Users can see what each agent is doing in real time, click on an agent to view details in a side panel, and focus the host terminal/IDE window where that agent is running.
 
 ## Goals
 
@@ -13,12 +13,11 @@ A local-first Next.js application that visualizes running Claude Code agents as 
 - Provide real-time visibility into what each agent is currently doing
 - Map each agent back to its host application (terminal or IDE) and focus that window on click
 - Deliver a playful, gamified experience using pixel-art visuals with swappable themes
-- Architect for future expansion to other agent platforms and cloud deployment
+- Architect for future expansion to other agent platforms
 
 ## Non-Goals (v1)
 
 - No control features (pause, kill, message agents)
-- No cloud deployment (local only)
 - No non-Claude agent support
 - No full transcript/conversation viewer (activity feed only)
 - No sound or music
@@ -104,7 +103,6 @@ interface TranscriptEntry {
 - `GET /api/agents/stream` — returns newline-delimited JSON events
 - Event types: `agent-added`, `agent-removed`, `agent-updated`
 - Client reads via `fetch()` with stream consumption, reconnects on disconnect
-- Compatible with Vercel's streaming response support for future cloud deployment
 
 **Window focus endpoint:**
 
@@ -218,7 +216,6 @@ Animation frame counts and sprite dimensions are identical across themes — onl
 ## Future Expansion Points
 
 - **Other agent platforms:** Abstract the data layer behind a provider interface; add LangGraph, CrewAI, AutoGen providers later
-- **Cloud deployment:** Add a local collector daemon that pushes data to a cloud backend; swap streaming response for managed WebSocket service
 - **Control features:** Add `POST` endpoints for pause/kill/message; extend side panel with control buttons
 - **Persistent history:** Store session snapshots to SQLite for historical view
 - **Sound/music:** Add ambient audio per theme, SFX on agent state changes

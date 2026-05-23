@@ -29,7 +29,7 @@ export function SidePanel() {
   };
 
   return (
-    <div className="w-80 bg-gray-900 border-l border-gray-800 flex flex-col h-full overflow-hidden">
+    <div className="bg-gray-900 flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold text-white truncate">

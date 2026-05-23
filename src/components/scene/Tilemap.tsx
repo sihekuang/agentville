@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Container, Sprite, TilingSprite, Texture } from "pixi.js";
 import { extend } from "@pixi/react";
+import { useTexture } from "./use-texture";
 import type { SceneTheme } from "./themes/theme-types";
 
 extend({ Container, Sprite, TilingSprite });
@@ -15,19 +16,18 @@ export function Tilemap({ theme }: TilemapProps) {
   const totalWidth = theme.gridCols * theme.tileSize;
   const totalHeight = theme.gridRows * theme.tileSize;
 
-  const floorTexture = useMemo(
-    () => Texture.from(theme.floor.src),
-    [theme.floor.src],
-  );
+  const floorTexture = useTexture(theme.floor.src);
 
   return (
     <pixiContainer>
-      <pixiTilingSprite
-        texture={floorTexture}
-        width={totalWidth}
-        height={totalHeight}
-        tilePosition={{ x: 0, y: 0 }}
-      />
+      {floorTexture && (
+        <pixiTilingSprite
+          texture={floorTexture}
+          width={totalWidth}
+          height={totalHeight}
+          tilePosition={{ x: 0, y: 0 }}
+        />
+      )}
       {theme.props.map((prop, i) => {
         const positions = getPropPositions(prop.slot, theme);
         return positions.map((pos, j) => (
@@ -45,7 +45,6 @@ export function Tilemap({ theme }: TilemapProps) {
   );
 }
 
-/** Small wrapper so that Texture.from is memoised per src string. */
 function PropSprite({
   src,
   x,
@@ -59,7 +58,8 @@ function PropSprite({
   width: number;
   height: number;
 }) {
-  const texture = useMemo(() => Texture.from(src), [src]);
+  const texture = useTexture(src);
+  if (!texture) return null;
   return (
     <pixiSprite texture={texture} x={x} y={y} width={width} height={height} />
   );

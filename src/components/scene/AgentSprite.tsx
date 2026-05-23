@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { Container, Sprite, Text, TextStyle, Texture } from "pixi.js";
+import { useCallback } from "react";
+import { Container, Sprite, Text, TextStyle } from "pixi.js";
 import { extend } from "@pixi/react";
+import { useTexture } from "./use-texture";
 import type { AgentAction } from "@/lib/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
@@ -47,23 +48,25 @@ export function AgentSprite({
     onClick(sessionId);
   }, [onClick, sessionId]);
 
-  const texture = useMemo(() => Texture.from(animConfig.src), [animConfig.src]);
+  const texture = useTexture(animConfig.src);
 
   const label = sessionId.slice(0, 6);
   const tint = status === "busy" ? 0xffffff : 0x888888;
 
   return (
     <pixiContainer x={x} y={y}>
-      <pixiSprite
-        texture={texture}
-        width={animConfig.frameWidth}
-        height={animConfig.frameHeight}
-        anchor={0.5}
-        tint={tint}
-        eventMode="static"
-        cursor="pointer"
-        onPointerDown={handleClick}
-      />
+      {texture && (
+        <pixiSprite
+          texture={texture}
+          width={animConfig.frameWidth}
+          height={animConfig.frameHeight}
+          anchor={0.5}
+          tint={tint}
+          eventMode="static"
+          cursor="pointer"
+          onPointerDown={handleClick}
+        />
+      )}
       <pixiText
         text={label}
         style={isSelected ? selectedLabelStyle : labelStyle}
