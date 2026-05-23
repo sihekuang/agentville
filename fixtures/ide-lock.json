@@ -1,0 +1,7 @@
+{
+  "workspaceFolders": ["/Users/test/my-project"],
+  "pid": 99999,
+  "ideName": "VS Code",
+  "transport": "ws",
+  "authToken": "fake-token"
+}

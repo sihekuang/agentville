@@ -1,0 +1,13 @@
+{
+  "pid": 12345,
+  "sessionId": "abc-123-def",
+  "cwd": "/Users/test/my-project",
+  "startedAt": 1700000000000,
+  "procStart": "Wed Nov 15 10:00:00 2023",
+  "version": "2.1.147",
+  "peerProtocol": 1,
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "status": "busy",
+  "updatedAt": 1700000060000
+}
