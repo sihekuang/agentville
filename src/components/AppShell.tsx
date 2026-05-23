@@ -39,7 +39,7 @@ export function AppShell() {
       <Header />
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize="65%" minSize="30%">
-          <main className="flex items-center justify-center bg-gray-950 overflow-auto h-full">
+          <main className="bg-gray-950 h-full overflow-hidden p-4">
             <AgentVilleScene />
           </main>
         </ResizablePanel>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState, useRef } from "react";
-import { Container, Sprite, Text, TextStyle } from "pixi.js";
+import { useCallback, useMemo, useState, useRef } from "react";
+import { Container, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useTexture } from "./use-texture";
 import type { AgentAction } from "@/lib/types";
@@ -56,6 +56,17 @@ export function AgentSprite({
   }, [onClick, sessionId]);
 
   const texture = useTexture(animConfig.src);
+
+  const hitArea = useMemo(
+    () => new Rectangle(
+      -animConfig.frameWidth / 2 - 4,
+      -animConfig.frameHeight / 2 - 4,
+      animConfig.frameWidth + 8,
+      animConfig.frameHeight + 20,
+    ),
+    [animConfig.frameWidth, animConfig.frameHeight],
+  );
+
   const timeRef = useRef(Math.random() * Math.PI * 2);
   const [bobY, setBobY] = useState(0);
   const [emoteY, setEmoteY] = useState(0);
@@ -82,7 +93,14 @@ export function AgentSprite({
   const emote = formatAction(currentAction);
 
   return (
-    <pixiContainer x={x} y={y + bobY}>
+    <pixiContainer
+      x={x}
+      y={y + bobY}
+      eventMode="static"
+      cursor="pointer"
+      onPointerDown={handleClick}
+      hitArea={hitArea}
+    >
       {texture && (
         <pixiSprite
           texture={texture}
@@ -90,9 +108,6 @@ export function AgentSprite({
           height={animConfig.frameHeight}
           anchor={0.5}
           tint={tint}
-          eventMode="static"
-          cursor="pointer"
-          onPointerDown={handleClick}
         />
       )}
       <pixiText
