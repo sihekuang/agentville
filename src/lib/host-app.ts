@@ -1,7 +1,7 @@
-import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import type { HostApp, RawIdeLock } from "./types";
+import { getPlatform } from "./platform";
 
 interface AppIdentification {
   type: "terminal" | "ide";
@@ -48,35 +48,6 @@ export function parseIdeLockFiles(entries: IdeLockEntry[]): RawIdeLock[] {
   return results;
 }
 
-function getParentPids(pid: number): number[] {
-  const pids: number[] = [];
-  let currentPid = pid;
-
-  for (let i = 0; i < 20; i++) {
-    try {
-      const ppid = parseInt(
-        execSync(`ps -o ppid= -p ${currentPid}`, { encoding: "utf-8" }).trim(),
-        10
-      );
-      if (isNaN(ppid) || ppid <= 1) break;
-      pids.push(ppid);
-      currentPid = ppid;
-    } catch {
-      break;
-    }
-  }
-
-  return pids;
-}
-
-function getProcessName(pid: number): string | null {
-  try {
-    return execSync(`ps -o comm= -p ${pid}`, { encoding: "utf-8" }).trim();
-  } catch {
-    return null;
-  }
-}
-
 function readIdeLockDir(ideDir: string): RawIdeLock[] {
   try {
     const files = fs.readdirSync(ideDir).filter((f) => f.endsWith(".lock"));
@@ -118,9 +89,10 @@ export function resolveHostApp(
     }
   }
 
-  const parentPids = getParentPids(pid);
+  const platform = getPlatform();
+  const parentPids = platform.getParentPids(pid);
   for (const ppid of parentPids) {
-    const processName = getProcessName(ppid);
+    const processName = platform.getProcessName(ppid);
     if (!processName) continue;
 
     const app = identifyAppFromProcessName(processName);

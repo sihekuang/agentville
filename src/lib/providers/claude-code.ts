@@ -1,0 +1,157 @@
+import fs from "fs";
+import path from "path";
+import type { AgentProvider } from "./provider";
+import type { DiscoveredAgent, NormalizedAction, ActivityEntry } from "./types";
+import type { AgentAction, TranscriptEntry } from "../types";
+import { discoverSessions, getTranscriptPath } from "../sessions";
+import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
+import { resolveHostApp } from "../host-app";
+
+const MAX_RECENT_ACTIONS = 20;
+
+/** Map Claude Code's AgentAction to provider-agnostic NormalizedAction */
+export function normalizeAction(action: AgentAction): NormalizedAction {
+  switch (action) {
+    case "tool:Read":
+      return "reading";
+    case "tool:Edit":
+    case "tool:Write":
+      return "editing";
+    case "tool:Bash":
+      return "executing";
+    case "tool:Agent":
+      return "delegating";
+    case "tool:other":
+      return "other";
+    case "thinking":
+      return "thinking";
+    case "writing":
+      return "writing";
+    case "idle":
+      return "idle";
+  }
+}
+
+/** Map a Claude TranscriptEntry to a provider-agnostic ActivityEntry */
+export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
+  const rawToolName =
+    entry.type === "tool_use"
+      ? entry.summary.split(" ")[0].split(":")[0]
+      : undefined;
+
+  let category: NormalizedAction;
+  switch (entry.type) {
+    case "thinking":
+      category = "thinking";
+      break;
+    case "text":
+      category = "writing";
+      break;
+    case "tool_use": {
+      const toolName = rawToolName ?? "";
+      if (toolName === "Read") category = "reading";
+      else if (toolName === "Edit" || toolName === "Write") category = "editing";
+      else if (toolName === "Bash") category = "executing";
+      else if (toolName === "Agent") category = "delegating";
+      else category = "other";
+      break;
+    }
+    case "subagent_start":
+    case "subagent_stop":
+      category = "delegating";
+      break;
+    default:
+      category = "other";
+  }
+
+  return {
+    timestamp: entry.timestamp,
+    category,
+    summary: entry.summary,
+    rawType: entry.type,
+    rawToolName,
+  };
+}
+
+export class ClaudeCodeProvider implements AgentProvider {
+  readonly name = "claude-code";
+  readonly displayName = "Claude Code";
+
+  private readonly claudeHome: string;
+  private readonly sessionsDir: string;
+  private readonly projectsDir: string;
+
+  constructor(claudeHome?: string) {
+    this.claudeHome =
+      claudeHome ?? path.join(process.env.HOME ?? "~", ".claude");
+    this.sessionsDir = path.join(this.claudeHome, "sessions");
+    this.projectsDir = path.join(this.claudeHome, "projects");
+  }
+
+  isAvailable(): boolean {
+    try {
+      return fs.existsSync(this.sessionsDir);
+    } catch {
+      return false;
+    }
+  }
+
+  async discoverAgents(): Promise<DiscoveredAgent[]> {
+    const sessions = await discoverSessions(this.sessionsDir);
+    return sessions.map((session) => this.buildDiscoveredAgent(session));
+  }
+
+  private buildDiscoveredAgent(
+    session: Awaited<ReturnType<typeof discoverSessions>>[number]
+  ): DiscoveredAgent {
+    const transcriptPath = getTranscriptPath(
+      this.projectsDir,
+      session.cwd,
+      session.sessionId
+    );
+
+    let recentTranscript: TranscriptEntry[] = [];
+    if (transcriptPath) {
+      try {
+        const raw = fs.readFileSync(transcriptPath, "utf-8");
+        const lines = raw.split("\n").filter((l) => l.trim().length > 0);
+        const allEntries: TranscriptEntry[] = [];
+        for (const line of lines) {
+          const entry = parseTranscriptLine(line);
+          if (entry) allEntries.push(entry);
+        }
+        recentTranscript = allEntries.slice(-MAX_RECENT_ACTIONS);
+      } catch {
+        // transcript not available
+      }
+    }
+
+    const claudeAction =
+      session.status === "idle"
+        ? "idle"
+        : currentActionFromTranscript(recentTranscript);
+
+    const hostApp = resolveHostApp(
+      session.pid,
+      session.cwd,
+      session.sessionId
+    );
+
+    return {
+      id: session.sessionId,
+      provider: this.name,
+      pid: session.pid,
+      cwd: session.cwd,
+      status: session.status,
+      startedAt: session.startedAt,
+      currentAction: normalizeAction(claudeAction),
+      recentActivity: recentTranscript.map(toActivityEntry),
+      hostApp,
+      subagents: [],
+      metadata: {
+        version: session.version,
+        entrypoint: session.entrypoint,
+      },
+    };
+  }
+}
