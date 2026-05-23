@@ -9,13 +9,13 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
         status === "busy"
-          ? "bg-green-900/50 text-green-300"
-          : "bg-gray-700/50 text-gray-400"
+          ? "bg-green-500/15 text-green-700 dark:text-green-300"
+          : "bg-muted text-muted-foreground"
       }`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${
-          status === "busy" ? "bg-green-400 animate-pulse" : "bg-gray-500"
+          status === "busy" ? "bg-green-500 dark:bg-green-400 animate-pulse" : "bg-muted-foreground/50"
         }`}
       />
       {status === "busy" ? "Busy" : "Idle"}

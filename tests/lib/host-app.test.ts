@@ -6,37 +6,44 @@ import {
 } from "@/lib/host-app";
 
 describe("identifyAppFromProcessName", () => {
-  it("identifies iTerm2", () => {
-    expect(identifyAppFromProcessName("iTerm2")).toEqual({
+  it("identifies iTerm2 from .app path", () => {
+    expect(identifyAppFromProcessName("/Applications/iTerm2.app/Contents/MacOS/iTerm2")).toEqual({
       type: "terminal",
       name: "iTerm2",
     });
   });
 
-  it("identifies VS Code", () => {
-    expect(identifyAppFromProcessName("Electron")).toEqual(null);
-    expect(identifyAppFromProcessName("Code Helper (Renderer)")).toEqual({
+  it("identifies VS Code from .app path", () => {
+    expect(identifyAppFromProcessName("/Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper (Renderer).app/Contents/MacOS/Code Helper (Renderer)")).toEqual({
+      type: "terminal",
+      name: "Visual Studio Code",
+    });
+  });
+
+  it("identifies IntelliJ IDEA as IDE", () => {
+    expect(identifyAppFromProcessName("/Applications/IntelliJ IDEA.app/Contents/MacOS/idea")).toEqual({
       type: "ide",
-      name: "VS Code",
+      name: "IntelliJ IDEA",
     });
   });
 
   it("identifies Terminal.app", () => {
-    expect(identifyAppFromProcessName("Terminal")).toEqual({
+    expect(identifyAppFromProcessName("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal")).toEqual({
       type: "terminal",
       name: "Terminal",
     });
   });
 
-  it("identifies Warp", () => {
-    expect(identifyAppFromProcessName("Warp")).toEqual({
+  it("identifies Warp from .app path", () => {
+    expect(identifyAppFromProcessName("/Applications/Warp.app/Contents/MacOS/stable")).toEqual({
       type: "terminal",
       name: "Warp",
     });
   });
 
-  it("returns null for unknown process", () => {
+  it("returns null for paths without .app", () => {
     expect(identifyAppFromProcessName("node")).toBeNull();
+    expect(identifyAppFromProcessName("/usr/bin/zsh")).toBeNull();
   });
 });
 

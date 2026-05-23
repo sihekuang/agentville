@@ -57,7 +57,7 @@ describe("integration: full pipeline", () => {
     expect(["thinking", "writing", "tool:Read", "tool:Edit", "tool:Bash", "tool:Write", "idle", "tool:other", "tool:Agent"]).toContain(action);
 
     // 6. Test host app identification
-    expect(identifyAppFromProcessName("iTerm2")).toEqual({
+    expect(identifyAppFromProcessName("/Applications/iTerm2.app/Contents/MacOS/iTerm2")).toEqual({
       type: "terminal",
       name: "iTerm2",
     });

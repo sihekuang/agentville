@@ -29,15 +29,15 @@ export function SidePanel() {
   };
 
   return (
-    <div className="bg-gray-900 flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-gray-800">
+    <div className="bg-card flex flex-col h-full overflow-hidden">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-white truncate">
+          <h2 className="text-sm font-bold text-foreground truncate">
             {agent.sessionId.slice(0, 8)}
           </h2>
           <button
             onClick={() => selectAgent(null)}
-            className="text-gray-500 hover:text-white text-lg leading-none"
+            className="text-muted-foreground hover:text-foreground text-lg leading-none"
           >
             x
           </button>
@@ -45,7 +45,7 @@ export function SidePanel() {
         <StatusBadge status={agent.status} />
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-muted-foreground">
             {agent.hostApp
               ? `${agent.hostApp.name} — ${shortenPath(agent.cwd)}`
               : `Unknown host — ${shortenPath(agent.cwd)}`}
@@ -55,8 +55,8 @@ export function SidePanel() {
             disabled={!agent.hostApp}
             className={`text-xs px-2 py-1 rounded ${
               agent.hostApp
-                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-                : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
           >
             Focus
@@ -64,25 +64,25 @@ export function SidePanel() {
         </div>
       </div>
 
-      <div className="p-4 border-b border-gray-800">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">
+      <div className="p-4 border-b border-border">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
           Current Activity
         </h3>
-        <p className="text-sm text-white">
+        <p className="text-sm text-foreground">
           {formatAction(agent.currentAction)}
         </p>
       </div>
 
-      <div className="p-4 border-b border-gray-800 flex-1 overflow-hidden">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+      <div className="p-4 border-b border-border flex-1 overflow-hidden">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
           Recent Actions
         </h3>
         <ActionList actions={agent.recentActions} />
       </div>
 
       {agent.subagents.length > 0 && (
-        <div className="p-4 border-b border-gray-800">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
             Subagents
           </h3>
           <ul className="space-y-1">
@@ -90,7 +90,7 @@ export function SidePanel() {
               <li
                 key={sub.sessionId}
                 onClick={() => selectAgent(sub.sessionId)}
-                className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white"
+                className="flex items-center gap-2 text-xs text-secondary-foreground cursor-pointer hover:text-foreground"
               >
                 <StatusBadge status={sub.status} />
                 <span className="truncate">{sub.sessionId.slice(0, 8)}</span>
@@ -101,20 +101,20 @@ export function SidePanel() {
       )}
 
       <div className="p-4">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
           Session Info
         </h3>
         <dl className="space-y-1 text-xs">
           <div className="flex justify-between">
-            <dt className="text-gray-500">Started</dt>
-            <dd className="text-gray-300">
-              {new Date(agent.startedAt).toLocaleTimeString()}
+            <dt className="text-muted-foreground">Started</dt>
+            <dd className="text-secondary-foreground" title={new Date(agent.startedAt).toLocaleString()}>
+              {formatRelativeTime(agent.startedAt)}
             </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">Directory</dt>
+            <dt className="text-muted-foreground">Directory</dt>
             <dd
-              className="text-indigo-400 hover:text-indigo-300 truncate ml-4 cursor-pointer"
+              className="text-primary hover:text-primary/80 truncate ml-4 cursor-pointer"
               title={agent.cwd}
               onClick={() => {
                 fetch("/api/open-directory", {
@@ -128,13 +128,26 @@ export function SidePanel() {
             </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">PID</dt>
-            <dd className="text-gray-300">{agent.pid}</dd>
+            <dt className="text-muted-foreground">PID</dt>
+            <dd className="text-secondary-foreground">{agent.pid}</dd>
           </div>
         </dl>
       </div>
     </div>
   );
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h ago`;
 }
 
 function shortenPath(p: string): string {

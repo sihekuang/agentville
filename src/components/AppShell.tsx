@@ -35,11 +35,11 @@ export function AppShell() {
   }, [selectedAgentId]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
+    <div className="flex flex-col h-screen bg-background text-foreground">
       <Header />
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize="65%" minSize="30%">
-          <main className="bg-gray-950 h-full overflow-hidden p-4">
+          <main className="bg-background h-full overflow-hidden p-4">
             <AgentVilleScene />
           </main>
         </ResizablePanel>

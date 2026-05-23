@@ -18,28 +18,42 @@ interface AgentSpriteProps {
   animConfig: AgentAnimationConfig;
   onClick: (sessionId: string) => void;
   isSelected: boolean;
+  isDark: boolean;
 }
 
-const labelStyle = new TextStyle({
-  fontSize: 8,
-  fill: 0xffffff,
-  fontFamily: "monospace",
-  align: "center",
-});
-
-const selectedLabelStyle = new TextStyle({
-  fontSize: 8,
-  fill: 0xffff00,
-  fontFamily: "monospace",
-  align: "center",
-});
-
-const emoteStyle = new TextStyle({
-  fontSize: 10,
-  fill: 0xffffff,
-  fontFamily: "sans-serif",
-  align: "center",
-});
+function makeStyles(isDark: boolean) {
+  return {
+    label: new TextStyle({
+      fontSize: 8,
+      fill: isDark ? 0xffffff : 0x222222,
+      fontFamily: "monospace",
+      align: "center",
+    }),
+    selectedLabel: new TextStyle({
+      fontSize: 8,
+      fill: isDark ? 0xffff00 : 0xcc8800,
+      fontFamily: "monospace",
+      align: "center",
+    }),
+    emote: new TextStyle({
+      fontSize: 10,
+      fill: isDark ? 0xffffff : 0x222222,
+      fontFamily: "sans-serif",
+      align: "center",
+    }),
+    zzz: [
+      new TextStyle({ fontSize: 6, fill: isDark ? 0x8888cc : 0x8888aa, fontFamily: "monospace" }),
+      new TextStyle({ fontSize: 8, fill: isDark ? 0x9999dd : 0x7777aa, fontFamily: "monospace" }),
+      new TextStyle({ fontSize: 10, fill: isDark ? 0xaaaaee : 0x666699, fontFamily: "monospace" }),
+    ],
+    selector: new TextStyle({
+      fontSize: 6,
+      fill: isDark ? 0xffff00 : 0xcc8800,
+      fontFamily: "sans-serif",
+    }),
+    idleTint: isDark ? 0x888888 : 0xaaaaaa,
+  };
+}
 
 export function AgentSprite({
   x,
@@ -50,12 +64,15 @@ export function AgentSprite({
   animConfig,
   onClick,
   isSelected,
+  isDark,
 }: AgentSpriteProps) {
   const handleClick = useCallback(() => {
     onClick(sessionId);
   }, [onClick, sessionId]);
 
   const texture = useTexture(animConfig.src);
+
+  const styles = useMemo(() => makeStyles(isDark), [isDark]);
 
   const hitArea = useMemo(
     () => new Rectangle(
@@ -89,7 +106,7 @@ export function AgentSprite({
   });
 
   const label = sessionId.slice(0, 6);
-  const tint = status === "busy" ? 0xffffff : 0x888888;
+  const tint = status === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);
 
   return (
@@ -112,14 +129,14 @@ export function AgentSprite({
       )}
       <pixiText
         text={label}
-        style={isSelected ? selectedLabelStyle : labelStyle}
+        style={isSelected ? styles.selectedLabel : styles.label}
         anchor={0.5}
         y={animConfig.frameHeight / 2 + 6}
       />
       {status === "busy" && emote && (
         <pixiText
           text={emote}
-          style={emoteStyle}
+          style={styles.emote}
           anchor={0.5}
           y={emoteY}
           alpha={emoteAlpha}
@@ -129,7 +146,7 @@ export function AgentSprite({
         <>
           <pixiText
             text="z"
-            style={new TextStyle({ fontSize: 6, fill: 0x8888cc, fontFamily: "monospace" })}
+            style={styles.zzz[0]}
             anchor={0.5}
             x={8}
             y={-animConfig.frameHeight / 2 - 2 + Math.sin(zzzPhase * 1.2) * 2}
@@ -137,7 +154,7 @@ export function AgentSprite({
           />
           <pixiText
             text="z"
-            style={new TextStyle({ fontSize: 8, fill: 0x9999dd, fontFamily: "monospace" })}
+            style={styles.zzz[1]}
             anchor={0.5}
             x={12}
             y={-animConfig.frameHeight / 2 - 7 + Math.sin(zzzPhase * 1.2 + 1) * 2}
@@ -145,7 +162,7 @@ export function AgentSprite({
           />
           <pixiText
             text="z"
-            style={new TextStyle({ fontSize: 10, fill: 0xaaaaee, fontFamily: "monospace" })}
+            style={styles.zzz[2]}
             anchor={0.5}
             x={16}
             y={-animConfig.frameHeight / 2 - 13 + Math.sin(zzzPhase * 1.2 + 2) * 2}
@@ -157,14 +174,14 @@ export function AgentSprite({
         <>
           <pixiText
             text={"▶"}
-            style={new TextStyle({ fontSize: 6, fill: 0xffff00, fontFamily: "sans-serif" })}
+            style={styles.selector}
             anchor={0.5}
             x={-animConfig.frameWidth / 2 - 4 + Math.sin(timeRef.current * 3) * 1.5}
             y={0}
           />
           <pixiText
             text={"◀"}
-            style={new TextStyle({ fontSize: 6, fill: 0xffff00, fontFamily: "sans-serif" })}
+            style={styles.selector}
             anchor={0.5}
             x={animConfig.frameWidth / 2 + 4 - Math.sin(timeRef.current * 3) * 1.5}
             y={0}

@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { Container } from "pixi.js";
 import { Application, extend } from "@pixi/react";
+import { useTheme } from "next-themes";
 import { useAgentStore } from "@/store/agents";
 import { Tilemap } from "./Tilemap";
 import { AgentSprite } from "./AgentSprite";
@@ -51,6 +52,8 @@ export function AgentVilleScene() {
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
   const selectAgent = useAgentStore((s) => s.selectAgent);
   const themeName = useAgentStore((s) => s.theme);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const theme = THEMES[themeName];
 
   const agentList = Object.values(agents);
@@ -85,7 +88,7 @@ export function AgentVilleScene() {
       <Application
         width={sceneWidth}
         height={sceneHeight}
-        background={0x1a1a2e}
+        background={isDark ? 0x1a1a2e : 0xe8e8f0}
         antialias={false}
         resolution={2}
       >
@@ -104,6 +107,7 @@ export function AgentVilleScene() {
                 animConfig={dynamicTheme.agent}
                 onClick={handleAgentClick}
                 isSelected={selectedAgentId === agent.sessionId}
+                isDark={isDark}
               />
             );
           })}
