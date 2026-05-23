@@ -62,7 +62,9 @@ const SKIN_SHADOW = rgba(220, 180, 140);
 const HAIR_DARK = rgba(60, 40, 30);
 const HAIR_LIGHT = rgba(140, 100, 60);
 const EYE = rgba(30, 30, 50);
+const EYE_SHINE = rgba(255, 255, 255);
 const MOUTH = rgba(180, 100, 80);
+const BLUSH = rgba(255, 170, 150);
 
 // Office
 const CARPET_1 = rgba(70, 80, 110);
@@ -202,12 +204,21 @@ function officeAgent() {
   drawRect(g, 12, 6, 8, 8, SKIN);
   drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
   // Eyes
-  drawPixel(g, 14, 9, EYE);
-  drawPixel(g, 18, 9, EYE);
-  // Mouth
-  drawPixel(g, 15, 11, MOUTH);
-  drawPixel(g, 16, 11, MOUTH);
-  drawPixel(g, 17, 11, MOUTH);
+  drawPixel(g, 14, 8, EYE);
+  drawPixel(g, 15, 8, EYE);
+  drawPixel(g, 18, 8, EYE);
+  drawPixel(g, 19, 8, EYE);
+  drawPixel(g, 15, 8, EYE_SHINE);
+  drawPixel(g, 19, 8, EYE_SHINE);
+  // Rosy cheeks
+  drawPixel(g, 13, 10, BLUSH);
+  drawPixel(g, 20, 10, BLUSH);
+  // Smile
+  drawPixel(g, 14, 11, MOUTH);
+  drawPixel(g, 15, 12, MOUTH);
+  drawPixel(g, 16, 12, MOUTH);
+  drawPixel(g, 17, 12, MOUTH);
+  drawPixel(g, 18, 11, MOUTH);
   // Shirt/body
   drawRect(g, 10, 14, 12, 8, SHIRT_BLUE);
   drawRect(g, 10, 14, 12, 2, SHIRT_BLUE_D);
@@ -336,12 +347,21 @@ function farmAgent() {
   drawRect(g, 12, 7, 8, 7, SKIN);
   drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
   // Eyes
-  drawPixel(g, 14, 9, EYE);
-  drawPixel(g, 18, 9, EYE);
+  drawPixel(g, 14, 8, EYE);
+  drawPixel(g, 15, 8, EYE);
+  drawPixel(g, 18, 8, EYE);
+  drawPixel(g, 19, 8, EYE);
+  drawPixel(g, 15, 8, EYE_SHINE);
+  drawPixel(g, 19, 8, EYE_SHINE);
+  // Rosy cheeks
+  drawPixel(g, 13, 10, BLUSH);
+  drawPixel(g, 20, 10, BLUSH);
   // Smile
-  drawPixel(g, 15, 11, MOUTH);
-  drawPixel(g, 16, 11, MOUTH);
-  drawPixel(g, 17, 11, MOUTH);
+  drawPixel(g, 14, 11, MOUTH);
+  drawPixel(g, 15, 12, MOUTH);
+  drawPixel(g, 16, 12, MOUTH);
+  drawPixel(g, 17, 12, MOUTH);
+  drawPixel(g, 18, 11, MOUTH);
   // Overalls (bib)
   drawRect(g, 10, 14, 12, 9, rgba(200, 180, 140)); // undershirt
   drawRect(g, 12, 16, 8, 7, OVERALLS_BLUE);
@@ -489,16 +509,23 @@ function workshopAgent() {
   drawRect(g, 12, 7, 8, 7, SKIN);
   drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
   // Safety glasses
-  drawRect(g, 13, 9, 3, 2, rgba(150, 200, 230));
-  drawRect(g, 17, 9, 3, 2, rgba(150, 200, 230));
-  drawRect(g, 16, 9, 1, 1, rgba(80, 80, 90));
+  drawRect(g, 13, 8, 3, 2, rgba(150, 200, 230));
+  drawRect(g, 17, 8, 3, 2, rgba(150, 200, 230));
+  drawRect(g, 16, 8, 1, 1, rgba(80, 80, 90));
   // Eyes behind glasses
-  drawPixel(g, 14, 9, rgba(30, 30, 50, 180));
-  drawPixel(g, 18, 9, rgba(30, 30, 50, 180));
-  // Mouth
-  drawPixel(g, 15, 11, MOUTH);
-  drawPixel(g, 16, 11, MOUTH);
-  drawPixel(g, 17, 11, MOUTH);
+  drawPixel(g, 14, 8, rgba(30, 30, 50, 180));
+  drawPixel(g, 18, 8, rgba(30, 30, 50, 180));
+  drawPixel(g, 15, 8, rgba(200, 230, 255));
+  drawPixel(g, 19, 8, rgba(200, 230, 255));
+  // Rosy cheeks
+  drawPixel(g, 13, 10, BLUSH);
+  drawPixel(g, 20, 10, BLUSH);
+  // Smile
+  drawPixel(g, 14, 11, MOUTH);
+  drawPixel(g, 15, 12, MOUTH);
+  drawPixel(g, 16, 12, MOUTH);
+  drawPixel(g, 17, 12, MOUTH);
+  drawPixel(g, 18, 11, MOUTH);
   // Jumpsuit
   drawRect(g, 10, 14, 12, 9, JUMPSUIT);
   drawRect(g, 10, 14, 12, 2, JUMPSUIT_D);

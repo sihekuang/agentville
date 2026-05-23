@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState, useRef } from "react";
 import { Container, Sprite, Text, TextStyle } from "pixi.js";
-import { extend } from "@pixi/react";
+import { extend, useTick } from "@pixi/react";
 import { useTexture } from "./use-texture";
 import type { AgentAction } from "@/lib/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
@@ -34,6 +34,13 @@ const selectedLabelStyle = new TextStyle({
   align: "center",
 });
 
+const emoteStyle = new TextStyle({
+  fontSize: 10,
+  fill: 0xffffff,
+  fontFamily: "sans-serif",
+  align: "center",
+});
+
 export function AgentSprite({
   x,
   y,
@@ -49,12 +56,33 @@ export function AgentSprite({
   }, [onClick, sessionId]);
 
   const texture = useTexture(animConfig.src);
+  const timeRef = useRef(Math.random() * Math.PI * 2);
+  const [bobY, setBobY] = useState(0);
+  const [emoteY, setEmoteY] = useState(0);
+  const [emoteAlpha, setEmoteAlpha] = useState(1);
+  const [zzzPhase, setZzzPhase] = useState(0);
+
+  useTick((ticker) => {
+    const dt = ticker.deltaTime / 60;
+    timeRef.current += dt;
+    const t = timeRef.current;
+
+    if (status === "busy") {
+      setBobY(Math.sin(t * 3) * 1.5);
+      setEmoteY(-animConfig.frameHeight / 2 - 6 + Math.sin(t * 2) * 3);
+      setEmoteAlpha(0.7 + Math.sin(t * 4) * 0.3);
+    } else {
+      setBobY(Math.sin(t * 0.8) * 0.5);
+      setZzzPhase(t);
+    }
+  });
 
   const label = sessionId.slice(0, 6);
   const tint = status === "busy" ? 0xffffff : 0x888888;
+  const emote = formatAction(currentAction);
 
   return (
-    <pixiContainer x={x} y={y}>
+    <pixiContainer x={x} y={y + bobY}>
       {texture && (
         <pixiSprite
           texture={texture}
@@ -73,13 +101,60 @@ export function AgentSprite({
         anchor={0.5}
         y={animConfig.frameHeight / 2 + 6}
       />
-      {status === "busy" && (
+      {status === "busy" && emote && (
         <pixiText
-          text={formatAction(currentAction)}
-          style={labelStyle}
+          text={emote}
+          style={emoteStyle}
           anchor={0.5}
-          y={-(animConfig.frameHeight / 2 + 4)}
+          y={emoteY}
+          alpha={emoteAlpha}
         />
+      )}
+      {status === "idle" && (
+        <>
+          <pixiText
+            text="z"
+            style={new TextStyle({ fontSize: 6, fill: 0x8888cc, fontFamily: "monospace" })}
+            anchor={0.5}
+            x={8}
+            y={-animConfig.frameHeight / 2 - 2 + Math.sin(zzzPhase * 1.2) * 2}
+            alpha={0.4 + Math.sin(zzzPhase * 1.5) * 0.3}
+          />
+          <pixiText
+            text="z"
+            style={new TextStyle({ fontSize: 8, fill: 0x9999dd, fontFamily: "monospace" })}
+            anchor={0.5}
+            x={12}
+            y={-animConfig.frameHeight / 2 - 7 + Math.sin(zzzPhase * 1.2 + 1) * 2}
+            alpha={0.3 + Math.sin(zzzPhase * 1.5 + 1) * 0.3}
+          />
+          <pixiText
+            text="z"
+            style={new TextStyle({ fontSize: 10, fill: 0xaaaaee, fontFamily: "monospace" })}
+            anchor={0.5}
+            x={16}
+            y={-animConfig.frameHeight / 2 - 13 + Math.sin(zzzPhase * 1.2 + 2) * 2}
+            alpha={0.2 + Math.sin(zzzPhase * 1.5 + 2) * 0.3}
+          />
+        </>
+      )}
+      {isSelected && (
+        <>
+          <pixiText
+            text={"▶"}
+            style={new TextStyle({ fontSize: 6, fill: 0xffff00, fontFamily: "sans-serif" })}
+            anchor={0.5}
+            x={-animConfig.frameWidth / 2 - 4 + Math.sin(timeRef.current * 3) * 1.5}
+            y={0}
+          />
+          <pixiText
+            text={"◀"}
+            style={new TextStyle({ fontSize: 6, fill: 0xffff00, fontFamily: "sans-serif" })}
+            anchor={0.5}
+            x={animConfig.frameWidth / 2 + 4 - Math.sin(timeRef.current * 3) * 1.5}
+            y={0}
+          />
+        </>
       )}
     </pixiContainer>
   );
