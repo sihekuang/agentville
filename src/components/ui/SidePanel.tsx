@@ -44,19 +44,24 @@ export function SidePanel() {
         </div>
         <StatusBadge status={agent.status} />
 
-        {agent.hostApp && (
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-gray-400">
-              {agent.hostApp.name} — {shortenPath(agent.cwd)}
-            </span>
-            <button
-              onClick={handleFocus}
-              className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded"
-            >
-              Focus
-            </button>
-          </div>
-        )}
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs text-gray-400">
+            {agent.hostApp
+              ? `${agent.hostApp.name} — ${shortenPath(agent.cwd)}`
+              : `Unknown host — ${shortenPath(agent.cwd)}`}
+          </span>
+          <button
+            onClick={handleFocus}
+            disabled={!agent.hostApp}
+            className={`text-xs px-2 py-1 rounded ${
+              agent.hostApp
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+                : "bg-gray-700 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            Focus
+          </button>
+        </div>
       </div>
 
       <div className="p-4 border-b border-gray-800">
@@ -108,7 +113,17 @@ export function SidePanel() {
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500">Directory</dt>
-            <dd className="text-gray-300 truncate ml-4">
+            <dd
+              className="text-indigo-400 hover:text-indigo-300 truncate ml-4 cursor-pointer"
+              title={agent.cwd}
+              onClick={() => {
+                fetch("/api/open-directory", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ path: agent.cwd }),
+                }).catch(() => {});
+              }}
+            >
               {shortenPath(agent.cwd)}
             </dd>
           </div>

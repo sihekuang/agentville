@@ -13,6 +13,12 @@ const APP_NAME_MAP: Record<string, string> = {
   WezTerm: "WezTerm",
   "IntelliJ IDEA": "IntelliJ IDEA",
   WebStorm: "WebStorm",
+  PyCharm: "PyCharm",
+  GoLand: "GoLand",
+  RubyMine: "RubyMine",
+  CLion: "CLion",
+  Rider: "Rider",
+  PhpStorm: "PhpStorm",
 };
 
 export function buildFocusScript(hostApp: HostApp): string {

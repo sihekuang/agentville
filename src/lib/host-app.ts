@@ -8,23 +8,26 @@ interface AppIdentification {
   name: string;
 }
 
-const KNOWN_APPS: Record<string, AppIdentification> = {
-  iTerm2: { type: "terminal", name: "iTerm2" },
-  "iTerm2-arm64": { type: "terminal", name: "iTerm2" },
-  Terminal: { type: "terminal", name: "Terminal" },
-  Warp: { type: "terminal", name: "Warp" },
-  Hyper: { type: "terminal", name: "Hyper" },
-  Alacritty: { type: "terminal", name: "Alacritty" },
-  kitty: { type: "terminal", name: "Kitty" },
-  WezTerm: { type: "terminal", name: "WezTerm" },
-  "Code Helper (Renderer)": { type: "ide", name: "VS Code" },
-  "Cursor Helper (Renderer)": { type: "ide", name: "Cursor" },
-};
+const KNOWN_IDES = new Set([
+  "VS Code", "Cursor", "IntelliJ IDEA", "WebStorm", "PyCharm",
+  "GoLand", "RubyMine", "CLion", "Rider", "PhpStorm", "Xcode",
+]);
+
+function extractAppName(processPath: string): string | null {
+  const match = processPath.match(/\/([^/]+)\.app\//);
+  return match ? match[1] : null;
+}
 
 export function identifyAppFromProcessName(
-  name: string
+  processPath: string
 ): AppIdentification | null {
-  return KNOWN_APPS[name] ?? null;
+  const appName = extractAppName(processPath);
+  if (!appName) return null;
+
+  return {
+    type: KNOWN_IDES.has(appName) ? "ide" : "terminal",
+    name: appName,
+  };
 }
 
 interface IdeLockEntry {
@@ -120,8 +123,7 @@ export function resolveHostApp(
     const processName = getProcessName(ppid);
     if (!processName) continue;
 
-    const baseName = path.basename(processName);
-    const app = identifyAppFromProcessName(baseName);
+    const app = identifyAppFromProcessName(processName);
     if (app) {
       const result: HostApp = {
         type: app.type,
@@ -134,7 +136,6 @@ export function resolveHostApp(
     }
   }
 
-  hostAppCache.set(cacheKey, null);
   return null;
 }
 
