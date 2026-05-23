@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { execFile } from "child_process";
 import fs from "fs";
+import { getPlatform } from "@/lib/platform";
 
 export async function POST(req: Request): Promise<Response> {
   const { path } = await req.json();
@@ -9,13 +9,14 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
-  return new Promise((resolve) => {
-    execFile("open", [path], (err) => {
-      if (err) {
-        resolve(NextResponse.json({ error: err.message }, { status: 500 }));
-      } else {
-        resolve(NextResponse.json({ ok: true }));
-      }
-    });
-  });
+  const result = getPlatform().openDirectory(path);
+
+  if (!result.success) {
+    return NextResponse.json(
+      { error: "Failed to open directory" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

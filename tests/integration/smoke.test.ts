@@ -5,7 +5,7 @@ import os from "os";
 import { discoverSessions } from "@/lib/sessions";
 import { parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcript";
 import { identifyAppFromProcessName } from "@/lib/host-app";
-import { buildFocusScript } from "@/lib/focus-window";
+import { buildFocusScript } from "@/lib/platform/macos";
 import { useAgentStore } from "@/store/agents";
 
 describe("integration: full pipeline", () => {

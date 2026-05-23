@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildFocusScript } from "@/lib/focus-window";
+import { buildFocusScript } from "@/lib/platform/macos";
 
 describe("buildFocusScript", () => {
   it("builds AppleScript for a terminal app", () => {
