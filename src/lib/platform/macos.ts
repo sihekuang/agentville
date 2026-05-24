@@ -8,7 +8,14 @@ import type {
   HighlightOptions,
 } from "./strategy";
 
-const SCRIPTS_DIR = path.join(process.cwd(), "scripts", "macos");
+function getScriptsDir(): string {
+  if (process.env.ELECTRON_SCRIPTS_DIR) {
+    return process.env.ELECTRON_SCRIPTS_DIR;
+  }
+  return path.join(process.cwd(), "scripts", "macos");
+}
+
+const SCRIPTS_DIR = getScriptsDir();
 
 const APP_NAME_MAP: Record<string, string> = {
   "VS Code": "Visual Studio Code",
@@ -68,31 +75,14 @@ function runScript(scriptName: string, args: string[]): string {
 }
 
 export class MacOSStrategy implements PlatformStrategy {
-  private resolveWarpTabIndex(agentPid: number, warpPid: number): number | null {
+  private getWarpFocusUrl(agentPid: number): string | null {
     try {
-      const psOutput = execSync("ps -eo pid,ppid,tty,comm", {
+      const env = execSync(`ps eww -p ${agentPid}`, {
         encoding: "utf-8",
+        timeout: 3000,
       });
-
-      const agentTty = execSync(`ps -o tty= -p ${agentPid}`, {
-        encoding: "utf-8",
-      }).trim();
-      if (!agentTty || agentTty === "??") return null;
-
-      const warpTtys: string[] = [];
-      for (const line of psOutput.split("\n")) {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length < 4) continue;
-        const ppid = parseInt(parts[1], 10);
-        const tty = parts[2];
-        if (ppid === warpPid && tty !== "??" && tty.startsWith("ttys")) {
-          if (!warpTtys.includes(tty)) warpTtys.push(tty);
-        }
-      }
-
-      warpTtys.sort();
-      const index = warpTtys.indexOf(agentTty);
-      return index >= 0 ? index + 1 : null;
+      const match = env.match(/WARP_FOCUS_URL=(warp:\/\/\S+)/);
+      return match ? match[1] : null;
     } catch {
       return null;
     }
@@ -105,30 +95,21 @@ export class MacOSStrategy implements PlatformStrategy {
 
     try {
       if (hostApp.name === "Warp" && agentPid) {
-        const tabIndex = this.resolveWarpTabIndex(agentPid, hostApp.pid);
+        const focusUrl = this.getWarpFocusUrl(agentPid);
+        if (focusUrl) {
+          execSync(`open ${JSON.stringify(focusUrl)}`, { timeout: 3000 });
+          return { success: true, windowTitle: focusUrl };
+        }
 
         execFileSync("osascript", ["-e", 'tell application "Warp" to activate'], {
           encoding: "utf-8",
           timeout: 3000,
         });
 
-        if (tabIndex && tabIndex <= 9) {
-          execFileSync("osascript", [
-            "-e",
-            `tell application "System Events" to keystroke "${tabIndex}" using command down`,
-          ], { encoding: "utf-8", timeout: 3000 });
-
-          return { success: true, windowTitle: `tab ${tabIndex}` };
-        }
-
         return { success: true };
       }
 
-      const result = runScript("focus-window.applescript", [
-        appName,
-        processName,
-        hint,
-      ]);
+      const result = runScript("focus-window.applescript", [appName, processName, hint]);
 
       if (result.startsWith("focused:")) {
         return { success: true, windowTitle: result.slice("focused:".length) };
