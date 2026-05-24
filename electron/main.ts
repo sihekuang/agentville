@@ -113,9 +113,14 @@ function createWindow(port: number) {
 }
 
 app.on("ready", async () => {
-  const port = await findFreePort();
-  await startNextServer(port);
-  createWindow(port);
+  if (IS_DEV) {
+    const port = parseInt(process.env.DEV_PORT ?? "3000", 10);
+    createWindow(port);
+  } else {
+    const port = await findFreePort();
+    await startNextServer(port);
+    createWindow(port);
+  }
 });
 
 app.on("window-all-closed", () => {
