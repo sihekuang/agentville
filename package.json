@@ -2,6 +2,7 @@
   "name": "agents-visual",
   "version": "0.1.0",
   "private": true,
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +10,53 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "electron:dev": "concurrently --kill-others \"next dev\" \"wait-on http://127.0.0.1:3000 && npx tsc -p electron/tsconfig.json && electron .\"",
+    "electron:build": "bash scripts/build-electron.sh",
+    "electron:start": "npx tsc -p electron/tsconfig.json && electron ."
+  },
+  "build": {
+    "appId": "com.agentville.app",
+    "productName": "AgentVille",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist-electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "scripts/macos",
+        "to": "scripts/macos",
+        "filter": ["*.applescript"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "icon": "electron/icon.icns",
+      "darkModeSupport": true,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "AgentVille",
+      "iconSize": 80,
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    }
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -38,12 +85,16 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.2",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
     "typescript": "^5",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "wait-on": "^9.0.10"
   }
 }
