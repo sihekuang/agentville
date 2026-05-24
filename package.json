@@ -36,6 +36,8 @@
       "target": ["dmg"],
       "icon": "electron/icon.icns",
       "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.plist"
     },
