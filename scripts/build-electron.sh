@@ -16,7 +16,11 @@ echo "=== Compiling Electron ==="
 npx tsc -p electron/tsconfig.json
 
 echo "=== Packaging with electron-builder ==="
-npx electron-builder --mac
+if [ -n "${ELECTRON_BUILDER_ARCH:-}" ]; then
+  npx electron-builder --mac --${ELECTRON_BUILDER_ARCH}
+else
+  npx electron-builder --mac
+fi
 
 echo "=== Injecting standalone node_modules ==="
 # electron-builder strips node_modules from extraResources; copy them manually
@@ -27,7 +31,11 @@ if [ -n "$APP_DIR" ]; then
 fi
 
 echo "=== Cleanup ==="
-rm -rf .electron-standalone
+if [ "${CI:-}" != "true" ]; then
+  rm -rf .electron-standalone
+else
+  echo "CI mode: skipping cleanup so notarization step can access dist/"
+fi
 
 echo "=== Done ==="
 echo "App is in dist/"
