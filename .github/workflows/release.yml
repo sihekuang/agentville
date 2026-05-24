@@ -1,0 +1,182 @@
+name: Release
+
+# Triggered by:
+#   - Tag pushes matching v*  (e.g. v0.2.0)   — full release (sign + notarize)
+#   - Manual dispatch from the Actions tab     — signed build only (smoke test)
+#
+# Produces a Developer ID-signed AgentVille.app. Tag pushes additionally
+# notarize + staple so the .app passes Gatekeeper on a clean Mac.
+# workflow_dispatch builds are signed but not notarized — useful for
+# pipeline smoke tests without burning Apple notarization round-trips.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build, sign, notarize, release
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve release tag and version
+        id: tag
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Tag '$TAG' must match vMAJOR.MINOR.PATCH (e.g. v0.2.0)"
+              exit 1
+            fi
+            VERSION="${TAG#v}"
+            IS_RELEASE=true
+          else
+            TAG="dispatch-${GITHUB_RUN_NUMBER}"
+            VERSION="0.0.0"
+            IS_RELEASE=false
+          fi
+          echo "name=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_release=$IS_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG  Version: $VERSION  Is release: $IS_RELEASE"
+
+      # Import the Developer ID Application cert into a temp keychain.
+      # The keychain is wiped in the always-run cleanup step at the end
+      # of the job, so the cert never persists past this run.
+      - name: Set up signing keychain
+        env:
+          P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KC_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KC="$RUNNER_TEMP/build.keychain-db"
+          P12="$RUNNER_TEMP/cert.p12"
+
+          echo "$P12_BASE64" | base64 --decode > "$P12"
+          [ -s "$P12" ] || { echo "::error::decoded p12 is empty — re-push MACOS_CERT_P12_BASE64"; exit 1; }
+
+          security create-keychain -p "$KC_PASSWORD" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KC_PASSWORD" "$KC"
+
+          security import "$P12" \
+            -k "$KC" \
+            -P "$P12_PASSWORD" \
+            -f pkcs12 \
+            -A \
+            -T /usr/bin/codesign
+
+          security list-keychains -d user -s "$KC" \
+            $(security list-keychains -d user | tr -d '"' | xargs)
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: -s -k "$KC_PASSWORD" "$KC" >/dev/null
+
+          rm -f "$P12"
+
+      - name: Build and sign Electron app
+        env:
+          # electron-builder reads CSC_NAME to find the signing identity
+          # in the keychain we just set up.
+          CSC_NAME: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: bash scripts/build-electron.sh
+
+      - name: Locate, verify, and zip AgentVille.app
+        id: pack
+        run: |
+          set -euo pipefail
+          APP=$(find dist -maxdepth 2 -name "AgentVille.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::AgentVille.app not found in dist/"
+            ls -laR dist/
+            exit 1
+          fi
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dvv "$APP" 2>&1 | head -20
+
+          ditto -c -k --keepParent --sequesterRsrc "$APP" AgentVille.zip
+          ls -lh AgentVille.zip
+          echo "zip=AgentVille.zip" >> "$GITHUB_OUTPUT"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "ref_slug=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+
+      # Notarize + staple. Gated on tag pushes so workflow_dispatch runs
+      # don't queue submissions against Apple.
+      - name: Notarize and staple
+        if: steps.tag.outputs.is_release == 'true'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          P8="$RUNNER_TEMP/AuthKey.p8"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$P8"
+
+          xcrun notarytool submit AgentVille.zip \
+            --key "$P8" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait \
+            --timeout 30m
+
+          rm -f "$P8"
+
+          APP="${{ steps.pack.outputs.app }}"
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+
+          spctl -a -vvv -t install "$APP"
+
+          # Re-zip with the stapled ticket embedded
+          rm -f AgentVille.zip
+          ditto -c -k --keepParent --sequesterRsrc "$APP" AgentVille.zip
+          ls -lh AgentVille.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentVille-${{ steps.pack.outputs.ref_slug }}-app
+          path: ${{ steps.pack.outputs.zip }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.is_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          files: ${{ steps.pack.outputs.zip }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            **AgentVille** — Developer ID signed and notarized.
+
+            ### Install
+            1. Download `AgentVille.zip` and unzip.
+            2. Move `AgentVille.app` to `/Applications`.
+            3. Double-click to launch.
+            4. Grant Accessibility permission when prompted (required for the focus feature).
+
+      # always() so a failed build doesn't leave the cert sitting in a keychain.
+      - name: Cleanup signing keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
