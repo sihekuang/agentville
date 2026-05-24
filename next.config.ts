@@ -6,7 +6,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "./"),
   outputFileTracingIncludes: {
-    "/*": ["scripts/macos/**/*"],
+    "/*": [
+      "scripts/macos/**/*",
+      "node_modules/next/dist/compiled/next-server/**/*",
+    ],
+  },
+  outputFileTracingExcludes: {
+    "/*": ["dist/**/*", "dist-electron/**/*"],
   },
 };
 

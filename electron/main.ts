@@ -33,10 +33,12 @@ function findFreePort(): Promise<number> {
 
 async function startNextServer(port: number): Promise<void> {
   const serverPath = getResourcePath("standalone", "server.js");
-  const scriptsDir = getResourcePath("scripts", "macos");
+  const scriptsDir = getResourcePath("standalone", "scripts", "macos");
 
   return new Promise((resolve, reject) => {
+    const standaloneDir = getResourcePath("standalone");
     nextServer = fork(serverPath, [], {
+      cwd: standaloneDir,
       env: {
         ...process.env,
         PORT: String(port),

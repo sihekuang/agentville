@@ -26,24 +26,14 @@
     ],
     "extraResources": [
       {
-        "from": ".next/standalone",
+        "from": ".electron-standalone",
         "to": "standalone",
-        "filter": ["**/*"]
-      },
-      {
-        "from": "scripts/macos",
-        "to": "scripts/macos",
-        "filter": ["*.applescript"]
+        "filter": ["**/*", "node_modules/**/*"]
       }
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["universal"]
-        }
-      ],
+      "target": ["dmg"],
       "icon": "electron/icon.icns",
       "darkModeSupport": true,
       "entitlements": "electron/entitlements.mac.plist",
