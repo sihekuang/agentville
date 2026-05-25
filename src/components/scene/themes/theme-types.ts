@@ -35,3 +35,18 @@ export interface SceneTheme {
   agent: AgentAnimationConfig;
   agentSlots: AgentSlot[];
 }
+
+export interface ParticleStyle {
+  text: string;
+  color: number;
+  fontSize: number;
+}
+
+export interface ParticleActionConfig {
+  styles: ParticleStyle[];
+  spawnRate: number;
+  drift: { dx: number; dy: number };
+  lifetime: { min: number; max: number };
+}
+
+export type ParticleMap = Partial<Record<AgentAction, ParticleActionConfig>>;
