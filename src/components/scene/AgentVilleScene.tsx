@@ -113,18 +113,24 @@ function SceneContent({
     vp.moveCenter(worldW / 2, worldH / 2);
 
     const parent = containerRef.current;
-    // Move all children from the temporary container into the viewport
     while (parent.children.length > 0) {
       vp.addChild(parent.children[0]);
     }
-    // Add viewport to stage
     app.stage.addChild(vp);
+
+    // Re-fit viewport when app resizes
+    const onResize = () => {
+      vp.resize(app.screen.width, app.screen.height, worldW, worldH);
+      vp.fit(true, worldW, worldH);
+      vp.moveCenter(worldW / 2, worldH / 2);
+    };
+    app.renderer.on("resize", onResize);
 
     viewportRef.current = vp;
     onViewportReady(vp);
 
     return () => {
-      // Move children back before destroying viewport
+      app.renderer.off("resize", onResize);
       if (vp.children.length > 0 && parent) {
         while (vp.children.length > 0) {
           parent.addChild(vp.children[0]);
@@ -139,7 +145,7 @@ function SceneContent({
 
   return (
     <pixiContainer ref={containerRef}>
-      <Tilemap theme={dynamicTheme} />
+      <Tilemap theme={dynamicTheme} agentCount={agentList.length} />
       {agentList.map((agent, index) => {
         const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
         return (
@@ -215,17 +221,25 @@ export function AgentVilleScene() {
     vp.moveCenter(worldW / 2, worldH / 2);
   }, [dynamicTheme]);
 
+  const containerDivRef = useRef<HTMLDivElement>(null);
+  const [containerReady, setContainerReady] = useState(false);
+
+  useEffect(() => {
+    if (containerDivRef.current) setContainerReady(true);
+  }, []);
+
   return (
-    <div className="relative w-full h-full [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:[image-rendering:pixelated]">
-      <Application
-        width={SCREEN_W}
-        height={SCREEN_H}
-        background={isDark ? 0x1a1a2e : 0xe8e8f0}
-        antialias={false}
-        resolution={2}
-        resizeTo={undefined as unknown as HTMLElement}
-        autoDensity
-      >
+    <div
+      ref={containerDivRef}
+      className="relative w-full h-full [&_canvas]:!w-full [&_canvas]:!h-full [&_canvas]:[image-rendering:pixelated]"
+    >
+      {containerReady && containerDivRef.current && (
+        <Application
+          background={isDark ? 0x1a1a2e : 0xe8e8f0}
+          antialias={false}
+          resizeTo={containerDivRef.current}
+          autoDensity
+        >
         <SceneContent
           dynamicTheme={dynamicTheme}
           agentList={agentList}
@@ -237,6 +251,7 @@ export function AgentVilleScene() {
           onViewportReady={handleViewportReady}
         />
       </Application>
+      )}
       <button
         onClick={handleFitAll}
         className="absolute bottom-3 right-3 px-2 py-1 text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"

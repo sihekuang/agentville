@@ -10,9 +10,10 @@ extend({ Container, Sprite, TilingSprite });
 
 interface TilemapProps {
   theme: SceneTheme;
+  agentCount?: number;
 }
 
-export function Tilemap({ theme }: TilemapProps) {
+export function Tilemap({ theme, agentCount }: TilemapProps) {
   const totalWidth = theme.gridCols * theme.tileSize;
   const totalHeight = theme.gridRows * theme.tileSize;
 
@@ -29,7 +30,7 @@ export function Tilemap({ theme }: TilemapProps) {
         />
       )}
       {theme.props.map((prop, i) => {
-        const positions = getPropPositions(prop.slot, theme);
+        const positions = getPropPositions(prop.slot, theme, agentCount);
         return positions.map((pos, j) => (
           <PropSprite
             key={`${prop.slot}-${i}-${j}`}
@@ -68,16 +69,21 @@ function PropSprite({
 function getPropPositions(
   slot: string,
   theme: SceneTheme,
+  agentCount?: number,
 ): Array<{ x: number; y: number }> {
   const t = theme.tileSize;
   switch (slot) {
     case "entrance":
       return [{ x: 0, y: 0 }];
-    case "workstation":
-      return theme.agentSlots.map((s) => ({
+    case "workstation": {
+      const slots = agentCount != null
+        ? theme.agentSlots.slice(0, agentCount)
+        : theme.agentSlots;
+      return slots.map((s) => ({
         x: s.x * t - t / 2,
         y: s.y * t - t,
       }));
+    }
     case "storage":
       return [{ x: (theme.gridCols - 1) * t, y: (theme.gridRows - 2) * t }];
     default:
