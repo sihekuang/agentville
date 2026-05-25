@@ -221,6 +221,18 @@ export function AgentVilleScene() {
     vp.moveCenter(worldW / 2, worldH / 2);
   }, [dynamicTheme]);
 
+  const handleZoomIn = useCallback(() => {
+    const vp = viewportInstanceRef.current;
+    if (!vp) return;
+    vp.zoom(-vp.worldScreenWidth * 0.2, true);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    const vp = viewportInstanceRef.current;
+    if (!vp) return;
+    vp.zoom(vp.worldScreenWidth * 0.2, true);
+  }, []);
+
   const containerDivRef = useRef<HTMLDivElement>(null);
   const [containerReady, setContainerReady] = useState(false);
 
@@ -252,13 +264,29 @@ export function AgentVilleScene() {
         />
       </Application>
       )}
-      <button
-        onClick={handleFitAll}
-        className="absolute bottom-3 right-3 px-2 py-1 text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-        title="Fit all agents in view"
-      >
-        Fit All
-      </button>
+      <div className="absolute bottom-3 right-3 flex gap-1">
+        <button
+          onClick={handleZoomIn}
+          className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+          title="Zoom in"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+          title="Zoom out"
+        >
+          −
+        </button>
+        <button
+          onClick={handleFitAll}
+          className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+          title="Fit all agents in view"
+        >
+          ⊡
+        </button>
+      </div>
     </div>
   );
 }
