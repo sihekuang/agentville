@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
   <!-- Sky -->
-  <rect width="32" height="32" rx="6" fill="#4FC3F7"/>
+  <rect width="32" height="32" fill="#4FC3F7"/>
 
   <!-- Sun -->
   <rect x="24" y="2" width="6" height="2" fill="#FFD54F"/>
