@@ -118,6 +118,56 @@ const JUMPSUIT_D = rgba(45, 65, 100);
 const HARD_HAT = rgba(230, 200, 50);
 const HARD_HAT_D = rgba(200, 170, 40);
 
+// ─── Pose infrastructure ───
+
+function makePose(overrides = {}) {
+  return {
+    headDx: 0, headDy: 0,
+    leftArmDy: 0, rightArmDy: 0,
+    leftArmDx: 0, rightArmDx: 0,
+    eyesClosed: false,
+    leanDx: 0,
+    ...overrides,
+  };
+}
+
+const ACTION_POSES = {
+  idle: [
+    makePose(),
+    makePose({ leanDx: 1, eyesClosed: true }),
+  ],
+  thinking: [
+    makePose(),
+    makePose({ rightArmDy: -2 }),
+    makePose({ rightArmDy: -3, headDx: 1, headDy: -1 }),
+    makePose({ rightArmDy: -2, headDx: 1 }),
+  ],
+  reading: [
+    makePose({ leftArmDx: 1, rightArmDx: -1 }),
+    makePose({ leftArmDx: 1, rightArmDx: -1, headDy: 1 }),
+  ],
+  editing: [
+    makePose({ leftArmDy: -1 }),
+    makePose({ rightArmDy: -1 }),
+    makePose({ leftArmDy: -1, headDy: 1 }),
+    makePose({ rightArmDy: -1 }),
+  ],
+  bash: [
+    makePose({ leftArmDx: -1, rightArmDx: 1 }),
+    makePose({ leftArmDx: -1, rightArmDx: 1, leftArmDy: -1, leanDx: -1 }),
+    makePose({ leftArmDx: -1, rightArmDx: 1, rightArmDy: -1 }),
+    makePose({ leftArmDx: -1, rightArmDx: 1, rightArmDy: -1, leanDx: 1 }),
+  ],
+  agent: [
+    makePose({ rightArmDy: -3, rightArmDx: 1 }),
+    makePose({ rightArmDy: -4, rightArmDx: 2 }),
+    makePose({ rightArmDy: -3, rightArmDx: 1, leanDx: 1 }),
+    makePose({ rightArmDy: -4, rightArmDx: 2, leanDx: 1 }),
+  ],
+};
+
+const ROW_ORDER = ["idle", "thinking", "reading", "editing", "bash", "agent"];
+
 // ─── Office sprites ───
 
 function officeFloor() {
@@ -194,43 +244,69 @@ function officeCabinet() {
   return g;
 }
 
-function officeAgent() {
+function officeAgentFrame(pose) {
   const g = fillGrid(32, 32, T);
-  // Hair
-  drawRect(g, 12, 4, 8, 3, HAIR_DARK);
-  drawPixel(g, 11, 5, HAIR_DARK);
-  drawPixel(g, 20, 5, HAIR_DARK);
-  // Head
-  drawRect(g, 12, 6, 8, 8, SKIN);
-  drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
-  // Eyes
-  drawPixel(g, 14, 8, EYE);
-  drawPixel(g, 15, 8, EYE);
-  drawPixel(g, 18, 8, EYE);
-  drawPixel(g, 19, 8, EYE);
-  drawPixel(g, 15, 8, EYE_SHINE);
-  drawPixel(g, 19, 8, EYE_SHINE);
-  // Rosy cheeks
-  drawPixel(g, 13, 10, BLUSH);
-  drawPixel(g, 20, 10, BLUSH);
-  // Smile
-  drawPixel(g, 14, 11, MOUTH);
-  drawPixel(g, 15, 12, MOUTH);
-  drawPixel(g, 16, 12, MOUTH);
-  drawPixel(g, 17, 12, MOUTH);
-  drawPixel(g, 18, 11, MOUTH);
-  // Shirt/body
-  drawRect(g, 10, 14, 12, 8, SHIRT_BLUE);
-  drawRect(g, 10, 14, 12, 2, SHIRT_BLUE_D);
-  drawRect(g, 14, 14, 4, 2, rgba(200, 200, 210)); // collar
-  // Arms
-  drawRect(g, 8, 15, 2, 7, SHIRT_BLUE);
-  drawRect(g, 22, 15, 2, 7, SHIRT_BLUE);
-  drawRect(g, 8, 22, 2, 2, SKIN);
-  drawRect(g, 22, 22, 2, 2, SKIN);
-  // Pants
+  const lean = pose.leanDx;
+
+  // Hair (moves with head + lean)
+  const hx = pose.headDx + lean;
+  const hy = pose.headDy;
+  drawRect(g, 12 + hx, 4 + hy, 8, 3, HAIR_DARK);
+  drawPixel(g, 11 + hx, 5 + hy, HAIR_DARK);
+  drawPixel(g, 20 + hx, 5 + hy, HAIR_DARK);
+
+  // Head (moves with head + lean)
+  drawRect(g, 12 + hx, 6 + hy, 8, 8, SKIN);
+  drawRect(g, 12 + hx, 12 + hy, 8, 2, SKIN_SHADOW);
+
+  // Eyes (moves with head + lean)
+  if (pose.eyesClosed) {
+    // Closed eyes: horizontal lines at eye-y+1 (y=9)
+    drawPixel(g, 14 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 15 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 18 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 19 + hx, 9 + hy, SKIN_SHADOW);
+  } else {
+    drawPixel(g, 14 + hx, 8 + hy, EYE);
+    drawPixel(g, 15 + hx, 8 + hy, EYE);
+    drawPixel(g, 18 + hx, 8 + hy, EYE);
+    drawPixel(g, 19 + hx, 8 + hy, EYE);
+    drawPixel(g, 15 + hx, 8 + hy, EYE_SHINE);
+    drawPixel(g, 19 + hx, 8 + hy, EYE_SHINE);
+  }
+
+  // Rosy cheeks (moves with head + lean)
+  drawPixel(g, 13 + hx, 10 + hy, BLUSH);
+  drawPixel(g, 20 + hx, 10 + hy, BLUSH);
+
+  // Smile (moves with head + lean)
+  drawPixel(g, 14 + hx, 11 + hy, MOUTH);
+  drawPixel(g, 15 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 16 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 17 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 18 + hx, 11 + hy, MOUTH);
+
+  // Shirt/body (moves with lean)
+  drawRect(g, 10 + lean, 14, 12, 8, SHIRT_BLUE);
+  drawRect(g, 10 + lean, 14, 12, 2, SHIRT_BLUE_D);
+  drawRect(g, 14 + lean, 14, 4, 2, rgba(200, 200, 210)); // collar
+
+  // Left arm (moves with lean + arm offsets)
+  const lax = pose.leftArmDx + lean;
+  const lay = pose.leftArmDy;
+  drawRect(g, 8 + lax, 15 + lay, 2, 7, SHIRT_BLUE);
+  drawRect(g, 8 + lax, 22 + lay, 2, 2, SKIN);
+
+  // Right arm (moves with lean + arm offsets)
+  const rax = pose.rightArmDx + lean;
+  const ray = pose.rightArmDy;
+  drawRect(g, 22 + rax, 15 + ray, 2, 7, SHIRT_BLUE);
+  drawRect(g, 22 + rax, 22 + ray, 2, 2, SKIN);
+
+  // Pants (anchored)
   drawRect(g, 11, 22, 10, 4, PANTS_GRAY);
-  // Legs/shoes
+
+  // Legs/shoes (anchored)
   drawRect(g, 11, 26, 4, 4, PANTS_GRAY);
   drawRect(g, 17, 26, 4, 4, PANTS_GRAY);
   drawRect(g, 11, 29, 4, 2, rgba(40, 40, 50));
@@ -336,47 +412,72 @@ function farmBarn() {
   return g;
 }
 
-function farmAgent() {
+function farmAgentFrame(pose) {
   const g = fillGrid(32, 32, T);
-  // Straw hat
-  drawRect(g, 10, 2, 12, 3, STRAW_HAT);
-  drawRect(g, 8, 5, 16, 2, STRAW_HAT);
-  drawRect(g, 8, 5, 16, 1, STRAW_HAT_D);
-  drawRect(g, 12, 2, 8, 1, STRAW_HAT_D);
-  // Head
-  drawRect(g, 12, 7, 8, 7, SKIN);
-  drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
-  // Eyes
-  drawPixel(g, 14, 8, EYE);
-  drawPixel(g, 15, 8, EYE);
-  drawPixel(g, 18, 8, EYE);
-  drawPixel(g, 19, 8, EYE);
-  drawPixel(g, 15, 8, EYE_SHINE);
-  drawPixel(g, 19, 8, EYE_SHINE);
-  // Rosy cheeks
-  drawPixel(g, 13, 10, BLUSH);
-  drawPixel(g, 20, 10, BLUSH);
-  // Smile
-  drawPixel(g, 14, 11, MOUTH);
-  drawPixel(g, 15, 12, MOUTH);
-  drawPixel(g, 16, 12, MOUTH);
-  drawPixel(g, 17, 12, MOUTH);
-  drawPixel(g, 18, 11, MOUTH);
-  // Overalls (bib)
-  drawRect(g, 10, 14, 12, 9, rgba(200, 180, 140)); // undershirt
-  drawRect(g, 12, 16, 8, 7, OVERALLS_BLUE);
+  const lean = pose.leanDx;
+  const hx = pose.headDx + lean;
+  const hy = pose.headDy;
+
+  // Straw hat (moves with head + lean)
+  drawRect(g, 10 + hx, 2 + hy, 12, 3, STRAW_HAT);
+  drawRect(g, 8 + hx, 5 + hy, 16, 2, STRAW_HAT);
+  drawRect(g, 8 + hx, 5 + hy, 16, 1, STRAW_HAT_D);
+  drawRect(g, 12 + hx, 2 + hy, 8, 1, STRAW_HAT_D);
+
+  // Head (moves with head + lean)
+  drawRect(g, 12 + hx, 7 + hy, 8, 7, SKIN);
+  drawRect(g, 12 + hx, 12 + hy, 8, 2, SKIN_SHADOW);
+
+  // Eyes (moves with head + lean)
+  if (pose.eyesClosed) {
+    drawPixel(g, 14 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 15 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 18 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 19 + hx, 9 + hy, SKIN_SHADOW);
+  } else {
+    drawPixel(g, 14 + hx, 8 + hy, EYE);
+    drawPixel(g, 15 + hx, 8 + hy, EYE);
+    drawPixel(g, 18 + hx, 8 + hy, EYE);
+    drawPixel(g, 19 + hx, 8 + hy, EYE);
+    drawPixel(g, 15 + hx, 8 + hy, EYE_SHINE);
+    drawPixel(g, 19 + hx, 8 + hy, EYE_SHINE);
+  }
+
+  // Rosy cheeks (moves with head + lean)
+  drawPixel(g, 13 + hx, 10 + hy, BLUSH);
+  drawPixel(g, 20 + hx, 10 + hy, BLUSH);
+
+  // Smile (moves with head + lean)
+  drawPixel(g, 14 + hx, 11 + hy, MOUTH);
+  drawPixel(g, 15 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 16 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 17 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 18 + hx, 11 + hy, MOUTH);
+
+  // Overalls body (moves with lean)
+  drawRect(g, 10 + lean, 14, 12, 9, rgba(200, 180, 140)); // undershirt
+  drawRect(g, 12 + lean, 16, 8, 7, OVERALLS_BLUE);
   // straps
-  drawRect(g, 12, 14, 2, 3, OVERALLS_BLUE_D);
-  drawRect(g, 18, 14, 2, 3, OVERALLS_BLUE_D);
-  // Arms
-  drawRect(g, 8, 15, 2, 7, rgba(200, 180, 140));
-  drawRect(g, 22, 15, 2, 7, rgba(200, 180, 140));
-  drawRect(g, 8, 22, 2, 2, SKIN);
-  drawRect(g, 22, 22, 2, 2, SKIN);
-  // Legs
+  drawRect(g, 12 + lean, 14, 2, 3, OVERALLS_BLUE_D);
+  drawRect(g, 18 + lean, 14, 2, 3, OVERALLS_BLUE_D);
+
+  // Left arm (moves with lean + arm offsets)
+  const lax = pose.leftArmDx + lean;
+  const lay = pose.leftArmDy;
+  drawRect(g, 8 + lax, 15 + lay, 2, 7, rgba(200, 180, 140));
+  drawRect(g, 8 + lax, 22 + lay, 2, 2, SKIN);
+
+  // Right arm (moves with lean + arm offsets)
+  const rax = pose.rightArmDx + lean;
+  const ray = pose.rightArmDy;
+  drawRect(g, 22 + rax, 15 + ray, 2, 7, rgba(200, 180, 140));
+  drawRect(g, 22 + rax, 22 + ray, 2, 2, SKIN);
+
+  // Legs (anchored)
   drawRect(g, 11, 23, 4, 5, OVERALLS_BLUE);
   drawRect(g, 17, 23, 4, 5, OVERALLS_BLUE);
-  // Boots
+
+  // Boots (anchored)
   drawRect(g, 10, 28, 5, 3, rgba(110, 70, 40));
   drawRect(g, 17, 28, 5, 3, rgba(110, 70, 40));
   return g;
@@ -499,58 +600,115 @@ function workshopShelf() {
   return g;
 }
 
-function workshopAgent() {
+function workshopAgentFrame(pose) {
   const g = fillGrid(32, 32, T);
-  // Hard hat
-  drawRect(g, 11, 2, 10, 2, HARD_HAT_D);
-  drawRect(g, 10, 4, 12, 3, HARD_HAT);
-  drawRect(g, 10, 4, 12, 1, HARD_HAT_D);
-  // Head
-  drawRect(g, 12, 7, 8, 7, SKIN);
-  drawRect(g, 12, 12, 8, 2, SKIN_SHADOW);
-  // Safety glasses
-  drawRect(g, 13, 8, 3, 2, rgba(150, 200, 230));
-  drawRect(g, 17, 8, 3, 2, rgba(150, 200, 230));
-  drawRect(g, 16, 8, 1, 1, rgba(80, 80, 90));
-  // Eyes behind glasses
-  drawPixel(g, 14, 8, rgba(30, 30, 50, 180));
-  drawPixel(g, 18, 8, rgba(30, 30, 50, 180));
-  drawPixel(g, 15, 8, rgba(200, 230, 255));
-  drawPixel(g, 19, 8, rgba(200, 230, 255));
-  // Rosy cheeks
-  drawPixel(g, 13, 10, BLUSH);
-  drawPixel(g, 20, 10, BLUSH);
-  // Smile
-  drawPixel(g, 14, 11, MOUTH);
-  drawPixel(g, 15, 12, MOUTH);
-  drawPixel(g, 16, 12, MOUTH);
-  drawPixel(g, 17, 12, MOUTH);
-  drawPixel(g, 18, 11, MOUTH);
-  // Jumpsuit
-  drawRect(g, 10, 14, 12, 9, JUMPSUIT);
-  drawRect(g, 10, 14, 12, 2, JUMPSUIT_D);
+  const lean = pose.leanDx;
+  const hx = pose.headDx + lean;
+  const hy = pose.headDy;
+
+  // Hard hat (moves with head + lean)
+  drawRect(g, 11 + hx, 2 + hy, 10, 2, HARD_HAT_D);
+  drawRect(g, 10 + hx, 4 + hy, 12, 3, HARD_HAT);
+  drawRect(g, 10 + hx, 4 + hy, 12, 1, HARD_HAT_D);
+
+  // Head (moves with head + lean)
+  drawRect(g, 12 + hx, 7 + hy, 8, 7, SKIN);
+  drawRect(g, 12 + hx, 12 + hy, 8, 2, SKIN_SHADOW);
+
+  // Safety glasses (moves with head + lean)
+  if (pose.eyesClosed) {
+    // Closed eyes: glasses still visible but eyes shut
+    drawRect(g, 13 + hx, 8 + hy, 3, 2, rgba(150, 200, 230));
+    drawRect(g, 17 + hx, 8 + hy, 3, 2, rgba(150, 200, 230));
+    drawRect(g, 16 + hx, 8 + hy, 1, 1, rgba(80, 80, 90));
+    drawPixel(g, 14 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 15 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 18 + hx, 9 + hy, SKIN_SHADOW);
+    drawPixel(g, 19 + hx, 9 + hy, SKIN_SHADOW);
+  } else {
+    drawRect(g, 13 + hx, 8 + hy, 3, 2, rgba(150, 200, 230));
+    drawRect(g, 17 + hx, 8 + hy, 3, 2, rgba(150, 200, 230));
+    drawRect(g, 16 + hx, 8 + hy, 1, 1, rgba(80, 80, 90));
+    // Eyes behind glasses
+    drawPixel(g, 14 + hx, 8 + hy, rgba(30, 30, 50, 180));
+    drawPixel(g, 18 + hx, 8 + hy, rgba(30, 30, 50, 180));
+    drawPixel(g, 15 + hx, 8 + hy, rgba(200, 230, 255));
+    drawPixel(g, 19 + hx, 8 + hy, rgba(200, 230, 255));
+  }
+
+  // Rosy cheeks (moves with head + lean)
+  drawPixel(g, 13 + hx, 10 + hy, BLUSH);
+  drawPixel(g, 20 + hx, 10 + hy, BLUSH);
+
+  // Smile (moves with head + lean)
+  drawPixel(g, 14 + hx, 11 + hy, MOUTH);
+  drawPixel(g, 15 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 16 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 17 + hx, 12 + hy, MOUTH);
+  drawPixel(g, 18 + hx, 11 + hy, MOUTH);
+
+  // Jumpsuit body (moves with lean)
+  drawRect(g, 10 + lean, 14, 12, 9, JUMPSUIT);
+  drawRect(g, 10 + lean, 14, 12, 2, JUMPSUIT_D);
   // name patch
-  drawRect(g, 12, 16, 5, 3, rgba(200, 200, 200));
-  drawRect(g, 13, 17, 3, 1, rgba(30, 30, 30));
+  drawRect(g, 12 + lean, 16, 5, 3, rgba(200, 200, 200));
+  drawRect(g, 13 + lean, 17, 3, 1, rgba(30, 30, 30));
   // zipper
   for (let y = 14; y < 23; y += 2) {
-    drawPixel(g, 16, y, rgba(180, 180, 60));
+    drawPixel(g, 16 + lean, y, rgba(180, 180, 60));
   }
-  // Arms
-  drawRect(g, 8, 15, 2, 7, JUMPSUIT);
-  drawRect(g, 22, 15, 2, 7, JUMPSUIT);
-  // Gloves
-  drawRect(g, 8, 22, 2, 2, rgba(180, 150, 50));
-  drawRect(g, 22, 22, 2, 2, rgba(180, 150, 50));
-  // Legs
+
+  // Left arm (moves with lean + arm offsets)
+  const lax = pose.leftArmDx + lean;
+  const lay = pose.leftArmDy;
+  drawRect(g, 8 + lax, 15 + lay, 2, 7, JUMPSUIT);
+  drawRect(g, 8 + lax, 22 + lay, 2, 2, rgba(180, 150, 50)); // glove
+
+  // Right arm (moves with lean + arm offsets)
+  const rax = pose.rightArmDx + lean;
+  const ray = pose.rightArmDy;
+  drawRect(g, 22 + rax, 15 + ray, 2, 7, JUMPSUIT);
+  drawRect(g, 22 + rax, 22 + ray, 2, 2, rgba(180, 150, 50)); // glove
+
+  // Legs (anchored)
   drawRect(g, 11, 23, 4, 5, JUMPSUIT);
   drawRect(g, 17, 23, 4, 5, JUMPSUIT);
-  // Work boots
+
+  // Work boots (anchored)
   drawRect(g, 10, 28, 5, 3, rgba(80, 60, 40));
   drawRect(g, 17, 28, 5, 3, rgba(80, 60, 40));
   drawRect(g, 10, 28, 5, 1, rgba(100, 80, 50));
   drawRect(g, 17, 28, 5, 1, rgba(100, 80, 50));
   return g;
+}
+
+// ─── Sheet assembly ───
+
+async function saveAgentSheet(agentFrameFn, filePath) {
+  const maxFrames = 4;
+  const rows = ROW_ORDER.length; // 6
+  const sheetWidth = maxFrames * 32;
+  const sheetHeight = rows * 32;
+  const sheet = fillGrid(sheetWidth, sheetHeight, T);
+
+  for (let r = 0; r < rows; r++) {
+    const actionName = ROW_ORDER[r];
+    const poses = ACTION_POSES[actionName];
+    for (let f = 0; f < poses.length; f++) {
+      const frame = agentFrameFn(poses[f]);
+      for (let y = 0; y < 32; y++) {
+        for (let x = 0; x < 32; x++) {
+          sheet[r * 32 + y][f * 32 + x] = frame[y][x];
+        }
+      }
+    }
+  }
+
+  const { buf, width, height } = createPixelData(sheet);
+  await sharp(buf, { raw: { width, height, channels: 4 } })
+    .png()
+    .toFile(filePath);
+  console.log(`  ✓ ${path.relative(SPRITES_DIR, filePath)}`);
 }
 
 // ─── Generate all ───
@@ -563,21 +721,21 @@ async function main() {
   await savePng(officeDoor(), path.join(SPRITES_DIR, "office", "door.png"));
   await savePng(officeDesk(), path.join(SPRITES_DIR, "office", "desk.png"));
   await savePng(officeCabinet(), path.join(SPRITES_DIR, "office", "cabinet.png"));
-  await savePng(officeAgent(), path.join(SPRITES_DIR, "office", "agent.png"));
+  await saveAgentSheet(officeAgentFrame, path.join(SPRITES_DIR, "office", "agent.png"));
 
   console.log("\nFarm theme:");
   await savePng(farmFloor(), path.join(SPRITES_DIR, "farm", "floor.png"));
   await savePng(farmGate(), path.join(SPRITES_DIR, "farm", "gate.png"));
   await savePng(farmPlot(), path.join(SPRITES_DIR, "farm", "plot.png"));
   await savePng(farmBarn(), path.join(SPRITES_DIR, "farm", "barn.png"));
-  await savePng(farmAgent(), path.join(SPRITES_DIR, "farm", "agent.png"));
+  await saveAgentSheet(farmAgentFrame, path.join(SPRITES_DIR, "farm", "agent.png"));
 
   console.log("\nWorkshop theme:");
   await savePng(workshopFloor(), path.join(SPRITES_DIR, "workshop", "floor.png"));
   await savePng(workshopGarageDoor(), path.join(SPRITES_DIR, "workshop", "garage-door.png"));
   await savePng(workshopWorkbench(), path.join(SPRITES_DIR, "workshop", "workbench.png"));
   await savePng(workshopShelf(), path.join(SPRITES_DIR, "workshop", "shelf.png"));
-  await savePng(workshopAgent(), path.join(SPRITES_DIR, "workshop", "agent.png"));
+  await saveAgentSheet(workshopAgentFrame, path.join(SPRITES_DIR, "workshop", "agent.png"));
 
   console.log("\nDone! All sprite assets generated.");
 }
