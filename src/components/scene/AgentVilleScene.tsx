@@ -75,43 +75,70 @@ function SceneContent({
   onViewportReady,
 }: SceneContentProps) {
   const { app, isInitialised } = useApplication();
-  const viewportRef = useRef<Viewport>(null);
+  const viewportRef = useRef<Viewport | null>(null);
+  const containerRef = useRef<Container>(null);
 
   const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
   const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
 
   useEffect(() => {
-    const vp = viewportRef.current;
-    if (!vp || !isInitialised) return;
+    if (!isInitialised || !containerRef.current) return;
 
-    vp.removeAllListeners();
-    vp.plugins.removeAll();
+    if (viewportRef.current) {
+      viewportRef.current.destroy({ children: false });
+      viewportRef.current = null;
+    }
 
-    vp.resize(app.screen.width, app.screen.height, worldW, worldH);
+    const vp = new Viewport({
+      screenWidth: app.screen.width,
+      screenHeight: app.screen.height,
+      worldWidth: worldW,
+      worldHeight: worldH,
+      events: app.renderer.events,
+    });
 
     vp.drag()
       .pinch()
-      .wheel({ smooth: 3 })
+      .wheel({ smooth: 3, wheelZoom: true })
       .decelerate({ friction: 0.9 })
       .clampZoom({ minScale: MIN_SCALE, maxScale: MAX_SCALE });
+
+    // Prevent browser default scroll on the canvas so wheel events reach pixi-viewport
+    const canvas = app.canvas as HTMLCanvasElement;
+    const preventScroll = (e: WheelEvent) => e.preventDefault();
+    canvas.addEventListener("wheel", preventScroll, { passive: false });
+    vp.once("destroyed", () => canvas.removeEventListener("wheel", preventScroll));
 
     vp.fit(true, worldW, worldH);
     vp.moveCenter(worldW / 2, worldH / 2);
 
+    const parent = containerRef.current;
+    // Move all children from the temporary container into the viewport
+    while (parent.children.length > 0) {
+      vp.addChild(parent.children[0]);
+    }
+    // Add viewport to stage
+    app.stage.addChild(vp);
+
+    viewportRef.current = vp;
     onViewportReady(vp);
+
+    return () => {
+      // Move children back before destroying viewport
+      if (vp.children.length > 0 && parent) {
+        while (vp.children.length > 0) {
+          parent.addChild(vp.children[0]);
+        }
+      }
+      vp.destroy({ children: false });
+      viewportRef.current = null;
+    };
   }, [app, isInitialised, worldW, worldH, onViewportReady]);
 
   if (!isInitialised) return null;
 
   return (
-    <viewport
-      ref={viewportRef}
-      screenWidth={app.screen.width}
-      screenHeight={app.screen.height}
-      worldWidth={worldW}
-      worldHeight={worldH}
-      events={app.renderer.events}
-    >
+    <pixiContainer ref={containerRef}>
       <Tilemap theme={dynamicTheme} />
       {agentList.map((agent, index) => {
         const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
@@ -133,7 +160,7 @@ function SceneContent({
           />
         );
       })}
-    </viewport>
+    </pixiContainer>
   );
 }
 
