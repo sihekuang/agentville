@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Container, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useTexture } from "./use-texture";
@@ -110,25 +110,61 @@ export function AgentSprite({
   );
 
   const timeRef = useRef(Math.random() * Math.PI * 2);
-  const [bobY, setBobY] = useState(0);
-  const [emoteY, setEmoteY] = useState(0);
-  const [emoteAlpha, setEmoteAlpha] = useState(1);
-  const [zzzPhase, setZzzPhase] = useState(0);
 
-  useTick((ticker) => {
-    const dt = ticker.deltaTime / 60;
-    timeRef.current += dt;
-    const t = timeRef.current;
+  // Refs for imperative PixiJS mutations (no React re-renders per frame)
+  const containerRef = useRef<Container>(null);
+  const emoteRef = useRef<Text>(null);
+  const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
+  const selectorRefs = [useRef<Text>(null), useRef<Text>(null)] as const;
 
-    if (status === "busy") {
-      setBobY(Math.sin(t * 3) * 1.5);
-      setEmoteY(-animConfig.frameHeight / 2 - 6 + Math.sin(t * 2) * 3);
-      setEmoteAlpha(0.7 + Math.sin(t * 4) * 0.3);
-    } else {
-      setBobY(Math.sin(t * 0.8) * 0.5);
-      setZzzPhase(t);
-    }
-  });
+  const tickCallback = useCallback(
+    (ticker: { deltaTime: number }) => {
+      const dt = ticker.deltaTime / 60;
+      timeRef.current += dt;
+      const t = timeRef.current;
+
+      const container = containerRef.current;
+      if (!container) return;
+
+      if (status === "busy") {
+        container.y = y + Math.sin(t * 3) * 1.5;
+
+        const emote = emoteRef.current;
+        if (emote) {
+          emote.y = -animConfig.frameHeight / 2 - 6 + Math.sin(t * 2) * 3;
+          emote.alpha = 0.7 + Math.sin(t * 4) * 0.3;
+        }
+      } else {
+        container.y = y + Math.sin(t * 0.8) * 0.5;
+
+        const [z0, z1, z2] = zzzRefs;
+        if (z0.current) {
+          z0.current.y = -animConfig.frameHeight / 2 - 2 + Math.sin(t * 1.2) * 2;
+          z0.current.alpha = 0.4 + Math.sin(t * 1.5) * 0.3;
+        }
+        if (z1.current) {
+          z1.current.y = -animConfig.frameHeight / 2 - 7 + Math.sin(t * 1.2 + 1) * 2;
+          z1.current.alpha = 0.3 + Math.sin(t * 1.5 + 1) * 0.3;
+        }
+        if (z2.current) {
+          z2.current.y = -animConfig.frameHeight / 2 - 13 + Math.sin(t * 1.2 + 2) * 2;
+          z2.current.alpha = 0.2 + Math.sin(t * 1.5 + 2) * 0.3;
+        }
+      }
+
+      // Selection arrows bounce
+      const [leftArrow, rightArrow] = selectorRefs;
+      if (leftArrow.current) {
+        leftArrow.current.x = -animConfig.frameWidth / 2 - 4 + Math.sin(t * 3) * 1.5;
+      }
+      if (rightArrow.current) {
+        rightArrow.current.x = animConfig.frameWidth / 2 + 4 - Math.sin(t * 3) * 1.5;
+      }
+    },
+    [y, status, animConfig.frameHeight, animConfig.frameWidth],
+  );
+
+  useTick(tickCallback);
 
   const label = sessionId.slice(0, 6);
   const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
@@ -137,8 +173,9 @@ export function AgentSprite({
 
   return (
     <pixiContainer
+      ref={containerRef}
       x={x}
-      y={y + bobY}
+      y={y}
       eventMode="static"
       cursor="pointer"
       onPointerDown={handleClick}
@@ -167,55 +204,61 @@ export function AgentSprite({
       />
       {status === "busy" && emote && (
         <pixiText
+          ref={emoteRef}
           text={emote}
           style={styles.emote}
           anchor={0.5}
-          y={emoteY}
-          alpha={emoteAlpha}
+          y={-animConfig.frameHeight / 2 - 6}
+          alpha={1}
         />
       )}
       {status === "idle" && (
         <>
           <pixiText
+            ref={zzzRefs[0]}
             text="z"
             style={styles.zzz[0]}
             anchor={0.5}
             x={8}
-            y={-animConfig.frameHeight / 2 - 2 + Math.sin(zzzPhase * 1.2) * 2}
-            alpha={0.4 + Math.sin(zzzPhase * 1.5) * 0.3}
+            y={-animConfig.frameHeight / 2 - 2}
+            alpha={0.4}
           />
           <pixiText
+            ref={zzzRefs[1]}
             text="z"
             style={styles.zzz[1]}
             anchor={0.5}
             x={12}
-            y={-animConfig.frameHeight / 2 - 7 + Math.sin(zzzPhase * 1.2 + 1) * 2}
-            alpha={0.3 + Math.sin(zzzPhase * 1.5 + 1) * 0.3}
+            y={-animConfig.frameHeight / 2 - 7}
+            alpha={0.3}
           />
           <pixiText
+            ref={zzzRefs[2]}
             text="z"
             style={styles.zzz[2]}
             anchor={0.5}
             x={16}
-            y={-animConfig.frameHeight / 2 - 13 + Math.sin(zzzPhase * 1.2 + 2) * 2}
-            alpha={0.2 + Math.sin(zzzPhase * 1.5 + 2) * 0.3}
+            y={-animConfig.frameHeight / 2 - 13}
+            alpha={0.2}
           />
         </>
       )}
       {isSelected && (
         <>
           <pixiText
+            ref={selectorRefs[0]}
             text={"▶"}
             style={styles.selector}
             anchor={0.5}
-            x={-animConfig.frameWidth / 2 - 4 + Math.sin(timeRef.current * 3) * 1.5}
+            x={-animConfig.frameWidth / 2 - 4}
             y={0}
           />
           <pixiText
+            ref={selectorRefs[1]}
             text={"◀"}
             style={styles.selector}
             anchor={0.5}
-            x={animConfig.frameWidth / 2 + 4 - Math.sin(timeRef.current * 3) * 1.5}
+            x={animConfig.frameWidth / 2 + 4}
             y={0}
           />
         </>
