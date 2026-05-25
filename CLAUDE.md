@@ -92,6 +92,56 @@ The focus feature uses AppleScript files in `scripts/macos/` to activate and rai
 - `list-windows.applescript` — enumerates windows (title, index, bounds) as JSON
 - `get-window-bounds.applescript` — single window bounds lookup
 
+## Electron Packaging
+
+### Build
+
+```bash
+npm run electron:build
+```
+
+This runs `scripts/build-electron.sh` which:
+1. Builds Next.js in standalone mode
+2. Copies standalone output + public assets + macOS scripts into `.electron-standalone/`
+3. Compiles Electron TypeScript (`electron/` → `dist-electron/`)
+4. Packages with electron-builder into `dist/` (DMG + .app)
+5. Injects `node_modules` into the .app (electron-builder strips them from extraResources)
+
+The build output is **unsigned**. Signing and notarization are handled separately.
+
+### Sign & Notarize
+
+After building, run the signing script from `~/Documents/AppleSigning/`:
+
+```bash
+~/Documents/AppleSigning/sign-and-notarize.sh
+```
+
+This script (not in the repo) handles:
+1. Signing all native binaries (`.dylib`, `.node`, `.so`) inside `Contents/Resources/` — these get missed by electron-builder's initial signing since they're injected post-build
+2. Re-signing the `.app` bundle with hardened runtime + entitlements
+3. Rebuilding the DMG via `npx electron-builder --prepackaged` — this preserves electron-builder's built-in arrow background for the drag-and-drop install experience
+4. Submitting to Apple for notarization via `xcrun notarytool`
+5. Stapling the notarization ticket to both the DMG and .app
+6. Verifying with `spctl`
+
+Credentials are sourced from `~/Documents/AppleSigning/local-notarize.env`. The signing identity is auto-detected from the keychain.
+
+### Why signing is separate from the build script
+
+The build script (`scripts/build-electron.sh`) is checked into the repo and must stay generic — no personal signing identities, API keys, or machine-specific paths. The signing script lives outside the repo in `~/Documents/AppleSigning/` alongside the `.p12` cert and `.p8` API key.
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `scripts/build-electron.sh` | Build pipeline (in repo) |
+| `electron/main.ts` | Electron main process |
+| `electron/preload.ts` | Preload script (minimal) |
+| `electron/entitlements.mac.plist` | macOS entitlements (JIT, AppleEvents, etc.) |
+| `electron/icon.icns` | macOS app icon |
+| `package.json` `"build"` section | electron-builder config (app ID, DMG layout, targets) |
+
 ## Testing
 
 ```bash
