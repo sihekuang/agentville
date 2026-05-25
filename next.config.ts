@@ -4,6 +4,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   output: "standalone",
+  allowedDevOrigins: ["127.0.0.1"],
   outputFileTracingRoot: path.join(__dirname, "./"),
   outputFileTracingIncludes: {
     "/*": [
