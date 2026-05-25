@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { Container, Graphics, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
+import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
-import { useTexture } from "./use-texture";
+import { useAnimationFrames } from "./use-animation-frames";
 import type { AgentAction } from "@/lib/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
-extend({ Container, Sprite, Text, Graphics });
+extend({ AnimatedSprite, Container, Text, Graphics });
 
 interface AgentSpriteProps {
   x: number;
@@ -95,7 +95,7 @@ export function AgentSprite({
     onClick(sessionId);
   }, [onClick, onDoubleClick, sessionId]);
 
-  const texture = useTexture(animConfig.src);
+  const { textures, speed } = useAnimationFrames(animConfig.src, animConfig, currentAction, status);
 
   const styles = useMemo(() => makeStyles(isDark), [isDark]);
 
@@ -115,7 +115,7 @@ export function AgentSprite({
 
   // Refs for imperative PixiJS mutations (no React re-renders per frame)
   const containerRef = useRef<Container>(null);
-  const spriteRef = useRef<Sprite>(null);
+  const spriteRef = useRef<AnimatedSprite>(null);
   const shadowRef = useRef<Graphics>(null);
   const emoteRef = useRef<Text>(null);
   const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
@@ -127,6 +127,15 @@ export function AgentSprite({
       prevActionRef.current = currentAction;
     }
   }, [currentAction]);
+
+  useEffect(() => {
+    const sprite = spriteRef.current;
+    if (!sprite || !textures) return;
+    sprite.textures = textures;
+    sprite.animationSpeed = speed;
+    sprite.loop = true;
+    sprite.play();
+  }, [textures, speed]);
 
   const tickCallback = useCallback(
     (ticker: { deltaTime: number }) => {
@@ -233,12 +242,12 @@ export function AgentSprite({
           g.fill({ color: 0x000000, alpha: 0.15 });
         }}
       />
-      {texture && (
-        <pixiSprite
+      {textures && (
+        <pixiAnimatedSprite
           ref={spriteRef}
-          texture={texture}
-          width={animConfig.frameWidth}
-          height={animConfig.frameHeight}
+          textures={textures}
+          animationSpeed={speed}
+          loop={true}
           anchor={0.5}
           tint={tint}
         />
