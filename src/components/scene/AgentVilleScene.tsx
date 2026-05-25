@@ -243,12 +243,13 @@ export function AgentVilleScene() {
   return (
     <div
       ref={containerDivRef}
-      className="relative w-full h-full [&_canvas]:!w-full [&_canvas]:!h-full [&_canvas]:[image-rendering:pixelated]"
+      className="relative w-full h-full [&_canvas]:[image-rendering:pixelated]"
     >
       {containerReady && containerDivRef.current && (
         <Application
           background={isDark ? 0x1a1a2e : 0xe8e8f0}
           antialias={false}
+          roundPixels
           resizeTo={containerDivRef.current}
           autoDensity
         >

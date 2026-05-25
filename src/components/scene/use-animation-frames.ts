@@ -35,7 +35,10 @@ export function useAnimationFrames(
   useEffect(() => {
     let cancelled = false;
     Assets.load<Texture>(src).then((t) => {
-      if (!cancelled) setBaseTexture(t);
+      if (!cancelled) {
+        t.source.scaleMode = "nearest";
+        setBaseTexture(t);
+      }
     });
     return () => {
       cancelled = true;

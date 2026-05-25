@@ -9,7 +9,10 @@ export function useTexture(src: string): Texture | null {
   useEffect(() => {
     let cancelled = false;
     Assets.load<Texture>(src).then((t) => {
-      if (!cancelled) setTexture(t);
+      if (!cancelled) {
+        t.source.scaleMode = "nearest";
+        setTexture(t);
+      }
     });
     return () => {
       cancelled = true;

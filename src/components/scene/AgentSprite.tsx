@@ -25,51 +25,59 @@ interface AgentSpriteProps {
   themeName: string;
 }
 
+const TEXT_RES = 4;
+
 function makeStyles(isDark: boolean) {
   return {
     label: new TextStyle({
-      fontSize: 5,
+      fontSize: 5 * TEXT_RES,
       fill: isDark ? 0x999999 : 0x888888,
       fontFamily: "monospace",
       align: "center",
     }),
     selectedLabel: new TextStyle({
-      fontSize: 5,
+      fontSize: 5 * TEXT_RES,
       fill: isDark ? 0xccaa00 : 0xaa7700,
       fontFamily: "monospace",
       align: "center",
     }),
     dirLabel: new TextStyle({
-      fontSize: 7,
+      fontSize: 7 * TEXT_RES,
       fill: isDark ? 0xffffff : 0x222222,
       fontFamily: "monospace",
       align: "center",
     }),
     selectedDirLabel: new TextStyle({
-      fontSize: 7,
+      fontSize: 7 * TEXT_RES,
       fill: isDark ? 0xffff00 : 0xcc8800,
       fontFamily: "monospace",
       align: "center",
     }),
     emote: new TextStyle({
-      fontSize: 10,
+      fontSize: 10 * TEXT_RES,
       fill: isDark ? 0xffffff : 0x222222,
       fontFamily: "sans-serif",
       align: "center",
     }),
     zzz: [
-      new TextStyle({ fontSize: 6, fill: isDark ? 0x8888cc : 0x8888aa, fontFamily: "monospace" }),
-      new TextStyle({ fontSize: 8, fill: isDark ? 0x9999dd : 0x7777aa, fontFamily: "monospace" }),
-      new TextStyle({ fontSize: 10, fill: isDark ? 0xaaaaee : 0x666699, fontFamily: "monospace" }),
+      new TextStyle({ fontSize: 6 * TEXT_RES, fill: isDark ? 0x8888cc : 0x8888aa, fontFamily: "monospace" }),
+      new TextStyle({ fontSize: 8 * TEXT_RES, fill: isDark ? 0x9999dd : 0x7777aa, fontFamily: "monospace" }),
+      new TextStyle({ fontSize: 10 * TEXT_RES, fill: isDark ? 0xaaaaee : 0x666699, fontFamily: "monospace" }),
     ],
     selector: new TextStyle({
-      fontSize: 6,
+      fontSize: 6 * TEXT_RES,
       fill: isDark ? 0xffff00 : 0xcc8800,
       fontFamily: "sans-serif",
     }),
     idleTint: isDark ? 0x888888 : 0xaaaaaa,
   };
 }
+
+const BLANKET_COLORS: Record<string, number> = {
+  office: 0x4466aa,
+  farm: 0x557755,
+  workshop: 0x885544,
+};
 
 export function AgentSprite({
   x,
@@ -120,6 +128,8 @@ export function AgentSprite({
   const containerRef = useRef<Container>(null);
   const spriteRef = useRef<AnimatedSprite>(null);
   const shadowRef = useRef<Graphics>(null);
+  const bedRef = useRef<Graphics>(null);
+  const blanketRef = useRef<Graphics>(null);
   const emoteRef = useRef<Text>(null);
   const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
   const selectorRefs = [useRef<Text>(null), useRef<Text>(null)] as const;
@@ -158,19 +168,22 @@ export function AgentSprite({
           emote.alpha = 0.7 + Math.sin(t * 4) * 0.3;
         }
       } else {
-        container.y = y + Math.sin(t * 0.8) * 0.5;
+        container.y = y + Math.sin(t * 0.8) * 0.3;
 
         const [z0, z1, z2] = zzzRefs;
         if (z0.current) {
-          z0.current.y = -animConfig.frameHeight / 2 - 2 + Math.sin(t * 1.2) * 2;
+          z0.current.x = 10 + Math.sin(t * 0.8) * 1;
+          z0.current.y = -animConfig.frameHeight / 2 - 4 + Math.sin(t * 1.2) * 2;
           z0.current.alpha = 0.4 + Math.sin(t * 1.5) * 0.3;
         }
         if (z1.current) {
-          z1.current.y = -animConfig.frameHeight / 2 - 7 + Math.sin(t * 1.2 + 1) * 2;
+          z1.current.x = 14 + Math.sin(t * 0.8 + 1) * 1;
+          z1.current.y = -animConfig.frameHeight / 2 - 10 + Math.sin(t * 1.2 + 1) * 2;
           z1.current.alpha = 0.3 + Math.sin(t * 1.5 + 1) * 0.3;
         }
         if (z2.current) {
-          z2.current.y = -animConfig.frameHeight / 2 - 13 + Math.sin(t * 1.2 + 2) * 2;
+          z2.current.x = 18 + Math.sin(t * 0.8 + 2) * 1;
+          z2.current.y = -animConfig.frameHeight / 2 - 17 + Math.sin(t * 1.2 + 2) * 2;
           z2.current.alpha = 0.2 + Math.sin(t * 1.5 + 2) * 0.3;
         }
       }
@@ -184,12 +197,14 @@ export function AgentSprite({
         rightArrow.current.x = animConfig.frameWidth / 2 + 4 - Math.sin(t * 3) * 1.5;
       }
 
-      // Breathing — subtle Y-scale oscillation
       const sprite = spriteRef.current;
       if (sprite) {
-        const breathe = Math.sin(t * 2) * 0.02;
+        const breatheSpeed = status === "idle" ? 1.2 : 2;
+        const breatheAmount = status === "idle" ? 0.01 : 0.02;
+        const breathe = Math.sin(t * breatheSpeed) * breatheAmount;
         sprite.scale.y = 1.0 + breathe;
-        sprite.y = -breathe * animConfig.frameHeight * 0.5; // anchor compensation
+        const baseY = status === "idle" ? 2 : 0;
+        sprite.y = baseY - breathe * animConfig.frameHeight * 0.5;
       }
 
       // Squash/stretch on action transitions
@@ -237,14 +252,38 @@ export function AgentSprite({
       onPointerDown={handleClick}
       hitArea={hitArea}
     >
-      <pixiGraphics
-        ref={shadowRef}
-        draw={(g: Graphics) => {
-          g.clear();
-          g.ellipse(0, animConfig.frameHeight / 2 + 1, 8, 3);
-          g.fill({ color: 0x000000, alpha: 0.15 });
-        }}
-      />
+      {status === "busy" && (
+        <pixiGraphics
+          ref={shadowRef}
+          draw={(g: Graphics) => {
+            g.clear();
+            g.ellipse(0, animConfig.frameHeight / 2 + 1, 8, 3);
+            g.fill({ color: 0x000000, alpha: 0.15 });
+          }}
+        />
+      )}
+      {status === "idle" && (
+        <pixiGraphics
+          ref={bedRef}
+          draw={(g: Graphics) => {
+            const frameColor = isDark ? 0x5a3820 : 0x6b4226;
+            const headboardColor = isDark ? 0x3a2010 : 0x4a2c0f;
+            const mattressColor = isDark ? 0xc0b0a0 : 0xf0e0cc;
+            const pillowColor = isDark ? 0xcccccc : 0xeeeeee;
+            g.clear();
+            g.ellipse(0, 20, 11, 3);
+            g.fill({ color: 0x000000, alpha: 0.08 });
+            g.rect(-12, -19, 24, 3);
+            g.fill({ color: headboardColor });
+            g.rect(-13, -16, 26, 34);
+            g.fill({ color: frameColor });
+            g.rect(-11, -14, 22, 30);
+            g.fill({ color: mattressColor });
+            g.rect(-8, -14, 16, 4);
+            g.fill({ color: pillowColor });
+          }}
+        />
+      )}
       {textures && (
         <pixiAnimatedSprite
           ref={spriteRef}
@@ -253,6 +292,17 @@ export function AgentSprite({
           loop={true}
           anchor={0.5}
           tint={tint}
+        />
+      )}
+      {status === "idle" && (
+        <pixiGraphics
+          ref={blanketRef}
+          draw={(g: Graphics) => {
+            const color = BLANKET_COLORS[themeName] ?? 0x4466aa;
+            g.clear();
+            g.rect(-11, -2, 22, 18);
+            g.fill({ color, alpha: 0.9 });
+          }}
         />
       )}
       <AgentParticles
@@ -264,12 +314,14 @@ export function AgentSprite({
         text={dirName}
         style={isSelected ? styles.selectedDirLabel : styles.dirLabel}
         anchor={0.5}
+        scale={1 / TEXT_RES}
         y={animConfig.frameHeight / 2 + 6}
       />
       <pixiText
         text={label}
         style={isSelected ? styles.selectedLabel : styles.label}
         anchor={0.5}
+        scale={1 / TEXT_RES}
         y={animConfig.frameHeight / 2 + 14}
       />
       {status === "busy" && emote && (
@@ -278,6 +330,7 @@ export function AgentSprite({
           text={emote}
           style={styles.emote}
           anchor={0.5}
+          scale={1 / TEXT_RES}
           y={-animConfig.frameHeight / 2 - 6}
           alpha={1}
         />
@@ -289,8 +342,9 @@ export function AgentSprite({
             text="z"
             style={styles.zzz[0]}
             anchor={0.5}
-            x={8}
-            y={-animConfig.frameHeight / 2 - 2}
+            scale={1 / TEXT_RES}
+            x={10}
+            y={-animConfig.frameHeight / 2 - 4}
             alpha={0.4}
           />
           <pixiText
@@ -298,8 +352,9 @@ export function AgentSprite({
             text="z"
             style={styles.zzz[1]}
             anchor={0.5}
-            x={12}
-            y={-animConfig.frameHeight / 2 - 7}
+            scale={1 / TEXT_RES}
+            x={14}
+            y={-animConfig.frameHeight / 2 - 10}
             alpha={0.3}
           />
           <pixiText
@@ -307,8 +362,9 @@ export function AgentSprite({
             text="z"
             style={styles.zzz[2]}
             anchor={0.5}
-            x={16}
-            y={-animConfig.frameHeight / 2 - 13}
+            scale={1 / TEXT_RES}
+            x={18}
+            y={-animConfig.frameHeight / 2 - 17}
             alpha={0.2}
           />
         </>
@@ -320,6 +376,7 @@ export function AgentSprite({
             text={"▶"}
             style={styles.selector}
             anchor={0.5}
+            scale={1 / TEXT_RES}
             x={-animConfig.frameWidth / 2 - 4}
             y={0}
           />
@@ -328,6 +385,7 @@ export function AgentSprite({
             text={"◀"}
             style={styles.selector}
             anchor={0.5}
+            scale={1 / TEXT_RES}
             x={animConfig.frameWidth / 2 + 4}
             y={0}
           />
