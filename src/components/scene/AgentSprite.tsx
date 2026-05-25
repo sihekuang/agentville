@@ -79,6 +79,19 @@ const BLANKET_COLORS: Record<string, number> = {
   workshop: 0x885544,
 };
 
+const SLEEPING_HEAD = {
+  skin: 0xffd2aa,
+  eye: 0x1e1e32,
+  cheek: 0xffaa96,
+  mouth: 0xb46450,
+  chin: 0xdcb48c,
+  hair: {
+    office: 0x3c281e,
+    farm: 0xdcbe78,
+    workshop: 0xc8aa28,
+  } as Record<string, number>,
+};
+
 export function AgentSprite({
   x,
   y,
@@ -130,6 +143,7 @@ export function AgentSprite({
   const shadowRef = useRef<Graphics>(null);
   const bedRef = useRef<Graphics>(null);
   const blanketRef = useRef<Graphics>(null);
+  const headRef = useRef<Graphics>(null);
   const emoteRef = useRef<Text>(null);
   const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
   const selectorRefs = [useRef<Text>(null), useRef<Text>(null)] as const;
@@ -172,18 +186,18 @@ export function AgentSprite({
 
         const [z0, z1, z2] = zzzRefs;
         if (z0.current) {
-          z0.current.x = 10 + Math.sin(t * 0.8) * 1;
-          z0.current.y = -animConfig.frameHeight / 2 - 4 + Math.sin(t * 1.2) * 2;
+          z0.current.x = 14 + Math.sin(t * 0.8) * 1;
+          z0.current.y = -13 + Math.sin(t * 1.2) * 2;
           z0.current.alpha = 0.4 + Math.sin(t * 1.5) * 0.3;
         }
         if (z1.current) {
-          z1.current.x = 14 + Math.sin(t * 0.8 + 1) * 1;
-          z1.current.y = -animConfig.frameHeight / 2 - 10 + Math.sin(t * 1.2 + 1) * 2;
+          z1.current.x = 17 + Math.sin(t * 0.8 + 1) * 1;
+          z1.current.y = -19 + Math.sin(t * 1.2 + 1) * 2;
           z1.current.alpha = 0.3 + Math.sin(t * 1.5 + 1) * 0.3;
         }
         if (z2.current) {
-          z2.current.x = 18 + Math.sin(t * 0.8 + 2) * 1;
-          z2.current.y = -animConfig.frameHeight / 2 - 17 + Math.sin(t * 1.2 + 2) * 2;
+          z2.current.x = 20 + Math.sin(t * 0.8 + 2) * 1;
+          z2.current.y = -26 + Math.sin(t * 1.2 + 2) * 2;
           z2.current.alpha = 0.2 + Math.sin(t * 1.5 + 2) * 0.3;
         }
       }
@@ -199,12 +213,9 @@ export function AgentSprite({
 
       const sprite = spriteRef.current;
       if (sprite) {
-        const breatheSpeed = status === "idle" ? 1.2 : 2;
-        const breatheAmount = status === "idle" ? 0.01 : 0.02;
-        const breathe = Math.sin(t * breatheSpeed) * breatheAmount;
+        const breathe = Math.sin(t * 2) * 0.02;
         sprite.scale.y = 1.0 + breathe;
-        const baseY = status === "idle" ? 2 : 0;
-        sprite.y = baseY - breathe * animConfig.frameHeight * 0.5;
+        sprite.y = -breathe * animConfig.frameHeight * 0.5;
       }
 
       // Squash/stretch on action transitions
@@ -271,20 +282,24 @@ export function AgentSprite({
             const mattressColor = isDark ? 0xc0b0a0 : 0xf0e0cc;
             const pillowColor = isDark ? 0xcccccc : 0xeeeeee;
             g.clear();
-            g.ellipse(0, 20, 11, 3);
-            g.fill({ color: 0x000000, alpha: 0.08 });
-            g.rect(-12, -19, 24, 3);
+            g.ellipse(0, 13, 18, 3);
+            g.fill({ color: 0x000000, alpha: 0.06 });
+            g.rect(17, -11, 5, 19);
             g.fill({ color: headboardColor });
-            g.rect(-13, -16, 26, 34);
+            g.rect(-20, 4, 42, 3);
             g.fill({ color: frameColor });
-            g.rect(-11, -14, 22, 30);
+            g.rect(-19, 7, 3, 4);
+            g.fill({ color: frameColor });
+            g.rect(18, 7, 3, 4);
+            g.fill({ color: frameColor });
+            g.rect(-20, -1, 37, 5);
             g.fill({ color: mattressColor });
-            g.rect(-8, -14, 16, 4);
+            g.rect(10, -4, 7, 5);
             g.fill({ color: pillowColor });
           }}
         />
       )}
-      {textures && (
+      {textures && status === "busy" && (
         <pixiAnimatedSprite
           ref={spriteRef}
           textures={textures}
@@ -300,8 +315,52 @@ export function AgentSprite({
           draw={(g: Graphics) => {
             const color = BLANKET_COLORS[themeName] ?? 0x4466aa;
             g.clear();
-            g.rect(-11, -2, 22, 18);
-            g.fill({ color, alpha: 0.9 });
+            g.rect(-18, -5, 16, 1);
+            g.fill({ color });
+            g.rect(-20, -4, 30, 3);
+            g.fill({ color });
+            g.rect(-20, -1, 30, 5);
+            g.fill({ color });
+          }}
+        />
+      )}
+      {status === "idle" && (
+        <pixiGraphics
+          ref={headRef}
+          draw={(g: Graphics) => {
+            const hair = SLEEPING_HEAD.hair[themeName] ?? 0x3c281e;
+            const { skin, eye, cheek, mouth, chin } = SLEEPING_HEAD;
+            g.clear();
+            // Standing head rotated 90° CW: hair→right, chin→left
+            // Chin (leftmost)
+            g.rect(9, -6, 1, 8); g.fill({ color: chin });
+            // Chin/mouth/chin
+            g.rect(10, -6, 1, 3); g.fill({ color: chin });
+            g.rect(10, -3, 1, 3); g.fill({ color: mouth });
+            g.rect(10, 0, 1, 2); g.fill({ color: chin });
+            // Mouth features
+            g.rect(11, -6, 1, 2); g.fill({ color: skin });
+            g.rect(11, -4, 1, 1); g.fill({ color: mouth });
+            g.rect(11, -3, 1, 3); g.fill({ color: skin });
+            g.rect(11, 0, 1, 1); g.fill({ color: mouth });
+            g.rect(11, 1, 1, 1); g.fill({ color: skin });
+            // Cheeks
+            g.rect(12, -6, 1, 1); g.fill({ color: skin });
+            g.rect(12, -5, 1, 1); g.fill({ color: cheek });
+            g.rect(12, -4, 1, 6); g.fill({ color: skin });
+            g.rect(12, 2, 1, 1); g.fill({ color: cheek });
+            // Below eyes
+            g.rect(13, -6, 1, 8); g.fill({ color: skin });
+            // Eyes (closed)
+            g.rect(14, -6, 1, 2); g.fill({ color: skin });
+            g.rect(14, -4, 1, 2); g.fill({ color: eye });
+            g.rect(14, -2, 1, 2); g.fill({ color: skin });
+            g.rect(14, 0, 1, 2); g.fill({ color: eye });
+            // Forehead
+            g.rect(15, -6, 2, 8); g.fill({ color: skin });
+            // Hair
+            g.rect(17, -7, 1, 10); g.fill({ color: hair });
+            g.rect(18, -6, 1, 8); g.fill({ color: hair });
           }}
         />
       )}
@@ -343,8 +402,8 @@ export function AgentSprite({
             style={styles.zzz[0]}
             anchor={0.5}
             scale={1 / TEXT_RES}
-            x={10}
-            y={-animConfig.frameHeight / 2 - 4}
+            x={14}
+            y={-13}
             alpha={0.4}
           />
           <pixiText
@@ -353,8 +412,8 @@ export function AgentSprite({
             style={styles.zzz[1]}
             anchor={0.5}
             scale={1 / TEXT_RES}
-            x={14}
-            y={-animConfig.frameHeight / 2 - 10}
+            x={17}
+            y={-19}
             alpha={0.3}
           />
           <pixiText
@@ -363,8 +422,8 @@ export function AgentSprite({
             style={styles.zzz[2]}
             anchor={0.5}
             scale={1 / TEXT_RES}
-            x={18}
-            y={-animConfig.frameHeight / 2 - 17}
+            x={20}
+            y={-26}
             alpha={0.2}
           />
         </>
