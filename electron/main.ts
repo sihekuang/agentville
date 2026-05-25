@@ -1,4 +1,6 @@
 import { app, BrowserWindow, shell } from "electron";
+
+app.commandLine.appendSwitch("remote-debugging-port", "9222");
 import { fork, type ChildProcess } from "child_process";
 import path from "path";
 import net from "net";
@@ -103,6 +105,10 @@ function createWindow(port: number) {
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);
+
+  if (IS_DEV) {
+    mainWindow.webContents.openDevTools({ mode: "detach" });
+  }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);

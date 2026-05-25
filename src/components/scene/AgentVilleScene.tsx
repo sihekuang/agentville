@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "pixi.js";
-import { Application, extend } from "@pixi/react";
+import { Application, extend, useApplication } from "@pixi/react";
+import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
 import { useAgentStore } from "@/store/agents";
 import { Tilemap } from "./Tilemap";
@@ -13,7 +14,7 @@ import { workshopTheme } from "./themes/workshop";
 import type { SceneTheme, AgentSlot } from "./themes/theme-types";
 import type { Theme } from "@/store/agents";
 
-extend({ Container });
+extend({ Container, Viewport });
 
 const THEMES: Record<Theme, SceneTheme> = {
   office: officeTheme,
@@ -47,6 +48,95 @@ function computeLayout(agentCount: number) {
   return { gridCols, gridRows, slots };
 }
 
+const SCREEN_W = 800;
+const SCREEN_H = 600;
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 3;
+
+interface SceneContentProps {
+  dynamicTheme: SceneTheme;
+  agentList: import("@/store/agents").TrackedAgent[];
+  selectedAgentId: string | null;
+  handleAgentClick: (id: string) => void;
+  handleAgentDoubleClick: (id: string) => void;
+  isDark: boolean;
+  themeName: string;
+  onViewportReady: (vp: Viewport) => void;
+}
+
+function SceneContent({
+  dynamicTheme,
+  agentList,
+  selectedAgentId,
+  handleAgentClick,
+  handleAgentDoubleClick,
+  isDark,
+  themeName,
+  onViewportReady,
+}: SceneContentProps) {
+  const { app, isInitialised } = useApplication();
+  const viewportRef = useRef<Viewport>(null);
+
+  const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
+  const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
+
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp || !isInitialised) return;
+
+    vp.removeAllListeners();
+    vp.plugins.removeAll();
+
+    vp.resize(app.screen.width, app.screen.height, worldW, worldH);
+
+    vp.drag()
+      .pinch()
+      .wheel({ smooth: 3 })
+      .decelerate({ friction: 0.9 })
+      .clampZoom({ minScale: MIN_SCALE, maxScale: MAX_SCALE });
+
+    vp.fit(true, worldW, worldH);
+    vp.moveCenter(worldW / 2, worldH / 2);
+
+    onViewportReady(vp);
+  }, [app, isInitialised, worldW, worldH, onViewportReady]);
+
+  if (!isInitialised) return null;
+
+  return (
+    <viewport
+      ref={viewportRef}
+      screenWidth={app.screen.width}
+      screenHeight={app.screen.height}
+      worldWidth={worldW}
+      worldHeight={worldH}
+      events={app.renderer.events}
+    >
+      <Tilemap theme={dynamicTheme} />
+      {agentList.map((agent, index) => {
+        const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
+        return (
+          <AgentSprite
+            key={agent.sessionId}
+            x={slot.x * dynamicTheme.tileSize}
+            y={slot.y * dynamicTheme.tileSize}
+            sessionId={agent.sessionId}
+            cwd={agent.cwd}
+            currentAction={agent.currentAction}
+            status={agent.status}
+            animConfig={dynamicTheme.agent}
+            onClick={handleAgentClick}
+            onDoubleClick={handleAgentDoubleClick}
+            isSelected={selectedAgentId === agent.sessionId}
+            isDark={isDark}
+            themeName={themeName}
+          />
+        );
+      })}
+    </viewport>
+  );
+}
+
 export function AgentVilleScene() {
   const agents = useAgentStore((s) => s.agents);
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
@@ -57,6 +147,7 @@ export function AgentVilleScene() {
   const theme = THEMES[themeName];
 
   const agentList = Object.values(agents);
+  const viewportInstanceRef = useRef<Viewport>(null);
 
   const layout = useMemo(
     () => computeLayout(agentList.length),
@@ -84,42 +175,48 @@ export function AgentVilleScene() {
     fetch(`/api/agents/${sessionId}/focus`, { method: "POST" }).catch(() => {});
   }, []);
 
-  const sceneWidth = dynamicTheme.gridCols * dynamicTheme.tileSize;
-  const sceneHeight = dynamicTheme.gridRows * dynamicTheme.tileSize;
+  const handleViewportReady = useCallback((vp: Viewport) => {
+    (viewportInstanceRef as React.MutableRefObject<Viewport | null>).current = vp;
+  }, []);
+
+  const handleFitAll = useCallback(() => {
+    const vp = viewportInstanceRef.current;
+    if (!vp) return;
+    const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
+    const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
+    vp.fit(true, worldW, worldH);
+    vp.moveCenter(worldW / 2, worldH / 2);
+  }, [dynamicTheme]);
 
   return (
-    <div className="w-full h-full flex items-center justify-center [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:object-contain [&_canvas]:[image-rendering:pixelated]">
+    <div className="relative w-full h-full [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:[image-rendering:pixelated]">
       <Application
-        width={sceneWidth}
-        height={sceneHeight}
+        width={SCREEN_W}
+        height={SCREEN_H}
         background={isDark ? 0x1a1a2e : 0xe8e8f0}
         antialias={false}
         resolution={2}
+        resizeTo={undefined as unknown as HTMLElement}
+        autoDensity
       >
-        <pixiContainer>
-          <Tilemap theme={dynamicTheme} />
-          {agentList.map((agent, index) => {
-            const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
-            return (
-              <AgentSprite
-                key={agent.sessionId}
-                x={slot.x * dynamicTheme.tileSize}
-                y={slot.y * dynamicTheme.tileSize}
-                sessionId={agent.sessionId}
-                cwd={agent.cwd}
-                currentAction={agent.currentAction}
-                status={agent.status}
-                animConfig={dynamicTheme.agent}
-                onClick={handleAgentClick}
-                onDoubleClick={handleAgentDoubleClick}
-                isSelected={selectedAgentId === agent.sessionId}
-                isDark={isDark}
-                themeName={themeName}
-              />
-            );
-          })}
-        </pixiContainer>
+        <SceneContent
+          dynamicTheme={dynamicTheme}
+          agentList={agentList}
+          selectedAgentId={selectedAgentId}
+          handleAgentClick={handleAgentClick}
+          handleAgentDoubleClick={handleAgentDoubleClick}
+          isDark={isDark}
+          themeName={themeName}
+          onViewportReady={handleViewportReady}
+        />
       </Application>
+      <button
+        onClick={handleFitAll}
+        className="absolute bottom-3 right-3 px-2 py-1 text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+        title="Fit all agents in view"
+      >
+        Fit All
+      </button>
     </div>
   );
 }
