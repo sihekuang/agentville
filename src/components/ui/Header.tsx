@@ -36,8 +36,8 @@ export function Header() {
   const idleCount = agentList.filter((a) => a.status === "idle").length;
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-card border-b border-border">
-      <div className="flex items-center gap-3">
+    <header className="titlebar-drag flex items-center justify-between pl-24 pr-4 py-2 bg-card border-b border-border">
+      <div className="titlebar-no-drag flex items-center gap-3">
         <h1 className="text-lg font-bold text-foreground tracking-tight">
           AgentVille
         </h1>
@@ -91,7 +91,7 @@ export function Header() {
         </Popover>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="titlebar-no-drag flex items-center gap-3">
         <div className="flex items-center gap-1">
           {THEME_OPTIONS.map((opt) => (
             <button

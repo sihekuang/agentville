@@ -1,14 +1,11 @@
--- Focus a specific Warp tab by matching the project directory or running process in the title.
--- Warp exposes each tab as a separate "window" in System Events.
+-- Focus a specific Warp tab by cycling through tabs and matching the title.
+-- Warp exposes only ONE window to System Events — tabs are not separate windows.
+-- So we cycle tabs with Cmd+Shift+] and check the window title after each switch.
+--
 -- Usage: osascript focus-warp-tab.applescript <projectHint> <agentCwd>
 --
 -- projectHint:  Directory basename to match (e.g. "agents-visual")
--- agentCwd:     Full working directory path (e.g. "/Users/dan/projects/agents-visual")
---
--- Tries multiple matching strategies in order:
---   1. Tab title contains the project hint (directory basename)
---   2. Tab title contains the full cwd path
---   3. Tab title contains "claude" (the running agent process)
+-- agentCwd:     Full working directory path as fallback match
 --
 -- Returns: "focused:<windowTitle>" or "activated"
 
@@ -19,42 +16,30 @@ on run argv
 	tell application "Warp" to activate
 	delay 0.2
 
+	if projectHint is "" and agentCwd is "" then return "activated"
+
 	try
 		tell application "System Events"
 			tell process "Warp"
-				set windowList to every window
+				set startTitle to name of window 1
 
-				-- Pass 1: match project directory name in title
-				if projectHint is not "" then
-					repeat with w in windowList
-						set winTitle to name of w
-						if winTitle contains projectHint then
-							perform action "AXRaise" of w
-							return "focused:" & winTitle
-						end if
-					end repeat
+				if my titleMatches(startTitle, projectHint, agentCwd) then
+					return "focused:" & startTitle
 				end if
 
-				-- Pass 2: match full cwd path
-				if agentCwd is not "" then
-					repeat with w in windowList
-						set winTitle to name of w
-						if winTitle contains agentCwd then
-							perform action "AXRaise" of w
-							return "focused:" & winTitle
-						end if
-					end repeat
-				end if
+				repeat 20 times
+					keystroke "]" using {command down, shift down}
+					delay 0.15
+					set currentTitle to name of window 1
 
-				-- Pass 3: match "claude" (running agent process)
-				repeat with w in windowList
-					set winTitle to name of w
-					if winTitle contains "claude" then
-						perform action "AXRaise" of w
-						return "focused:" & winTitle
+					if currentTitle is startTitle then
+						return "activated"
+					end if
+
+					if my titleMatches(currentTitle, projectHint, agentCwd) then
+						return "focused:" & currentTitle
 					end if
 				end repeat
-
 			end tell
 		end tell
 	on error errMsg
@@ -63,3 +48,9 @@ on run argv
 
 	return "activated"
 end run
+
+on titleMatches(winTitle, projectHint, agentCwd)
+	if projectHint is not "" and winTitle contains projectHint then return true
+	if agentCwd is not "" and winTitle contains agentCwd then return true
+	return false
+end titleMatches

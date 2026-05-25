@@ -1,14 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { useAgentStore } from "@/store/agents";
 import { StatusBadge } from "./StatusBadge";
 import { ActionList } from "./ActionList";
 import { ACTIVITY_LEGEND } from "./Header";
 
+interface FocusDebugInfo {
+  success: boolean;
+  windowTitle: string | null;
+  method: string;
+  hostApp: { type: string; name: string };
+  debug: {
+    projectHint: string;
+    tty: string | null;
+    pid: number;
+    cwd: string;
+  };
+}
+
 export function SidePanel() {
   const agents = useAgentStore((s) => s.agents);
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
   const selectAgent = useAgentStore((s) => s.selectAgent);
+  const [focusInfo, setFocusInfo] = useState<FocusDebugInfo | null>(null);
 
   const agent = selectedAgentId ? agents[selectedAgentId] : null;
 
@@ -57,9 +72,11 @@ export function SidePanel() {
 
   const handleFocus = async () => {
     try {
-      await fetch(`/api/agents/${agent.sessionId}/focus`, { method: "POST" });
+      const res = await fetch(`/api/agents/${agent.sessionId}/focus`, { method: "POST" });
+      const data = await res.json();
+      setFocusInfo(data);
     } catch {
-      // focus failed silently
+      setFocusInfo(null);
     }
   };
 
@@ -175,6 +192,52 @@ export function SidePanel() {
           </div>
         </dl>
       </div>
+
+      {focusInfo && (
+        <div className="p-4 border-t border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+            Focus Debug
+          </h3>
+          <dl className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Result</dt>
+              <dd className={focusInfo.success ? "text-green-500" : "text-destructive"}>
+                {focusInfo.success ? "OK" : "Failed"}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Method</dt>
+              <dd className="text-secondary-foreground">{focusInfo.method}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Host App</dt>
+              <dd className="text-secondary-foreground">
+                {focusInfo.hostApp.name} ({focusInfo.hostApp.type})
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">TTY</dt>
+              <dd className="text-secondary-foreground font-mono">
+                {focusInfo.debug.tty ?? "none"}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Project Hint</dt>
+              <dd className="text-secondary-foreground">{focusInfo.debug.projectHint}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">PID</dt>
+              <dd className="text-secondary-foreground font-mono">{focusInfo.debug.pid}</dd>
+            </div>
+            {focusInfo.windowTitle && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Window</dt>
+                <dd className="text-secondary-foreground truncate ml-4">{focusInfo.windowTitle}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
     </div>
   );
 }
