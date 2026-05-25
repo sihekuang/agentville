@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Container, Graphics, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useTexture } from "./use-texture";
@@ -110,6 +110,8 @@ export function AgentSprite({
   );
 
   const timeRef = useRef(Math.random() * Math.PI * 2);
+  const squashRef = useRef({ active: false, t: 0 });
+  const prevActionRef = useRef(currentAction);
 
   // Refs for imperative PixiJS mutations (no React re-renders per frame)
   const containerRef = useRef<Container>(null);
@@ -118,6 +120,13 @@ export function AgentSprite({
   const emoteRef = useRef<Text>(null);
   const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
   const selectorRefs = [useRef<Text>(null), useRef<Text>(null)] as const;
+
+  useEffect(() => {
+    if (prevActionRef.current !== currentAction) {
+      squashRef.current = { active: true, t: 0 };
+      prevActionRef.current = currentAction;
+    }
+  }, [currentAction]);
 
   const tickCallback = useCallback(
     (ticker: { deltaTime: number }) => {
@@ -169,6 +178,22 @@ export function AgentSprite({
         const breathe = Math.sin(t * 2) * 0.02;
         sprite.scale.y = 1.0 + breathe;
         sprite.y = -breathe * animConfig.frameHeight * 0.5; // anchor compensation
+      }
+
+      // Squash/stretch on action transitions
+      const sq = squashRef.current;
+      if (sq.active && sprite) {
+        sq.t += dt;
+        const duration = 0.15;
+        const progress = Math.min(sq.t / duration, 1);
+        const squashAmount = Math.sin(progress * Math.PI) * 0.12;
+        sprite.scale.x = 1 + squashAmount;
+        sprite.scale.y = 1 - squashAmount + Math.sin(t * 2) * 0.02; // keep breathing overlay
+        if (progress >= 1) {
+          sq.active = false;
+          sprite.scale.x = 1;
+          // Don't reset scale.y — let breathing resume naturally
+        }
       }
 
       // Shadow — scales inversely with bob height
