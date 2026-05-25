@@ -114,6 +114,7 @@ export function AgentVilleScene() {
                 onDoubleClick={handleAgentDoubleClick}
                 isSelected={selectedAgentId === agent.sessionId}
                 isDark={isDark}
+                themeName={themeName}
               />
             );
           })}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useAnimationFrames } from "./use-animation-frames";
+import { AgentParticles } from "./AgentParticles";
 import type { AgentAction } from "@/lib/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
@@ -21,6 +22,7 @@ interface AgentSpriteProps {
   onDoubleClick: (sessionId: string) => void;
   isSelected: boolean;
   isDark: boolean;
+  themeName: string;
 }
 
 function makeStyles(isDark: boolean) {
@@ -81,6 +83,7 @@ export function AgentSprite({
   onDoubleClick,
   isSelected,
   isDark,
+  themeName,
 }: AgentSpriteProps) {
   const lastClickRef = useRef(0);
 
@@ -252,6 +255,11 @@ export function AgentSprite({
           tint={tint}
         />
       )}
+      <AgentParticles
+        themeName={themeName}
+        currentAction={currentAction}
+        status={status}
+      />
       <pixiText
         text={dirName}
         style={isSelected ? styles.selectedDirLabel : styles.dirLabel}
