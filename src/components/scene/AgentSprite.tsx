@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from "react";
-import { Container, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
+import { Container, Graphics, Rectangle, Sprite, Text, TextStyle } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useTexture } from "./use-texture";
 import type { AgentAction } from "@/lib/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
-extend({ Container, Sprite, Text });
+extend({ Container, Sprite, Text, Graphics });
 
 interface AgentSpriteProps {
   x: number;
@@ -113,6 +113,8 @@ export function AgentSprite({
 
   // Refs for imperative PixiJS mutations (no React re-renders per frame)
   const containerRef = useRef<Container>(null);
+  const spriteRef = useRef<Sprite>(null);
+  const shadowRef = useRef<Graphics>(null);
   const emoteRef = useRef<Text>(null);
   const zzzRefs = [useRef<Text>(null), useRef<Text>(null), useRef<Text>(null)] as const;
   const selectorRefs = [useRef<Text>(null), useRef<Text>(null)] as const;
@@ -160,6 +162,23 @@ export function AgentSprite({
       if (rightArrow.current) {
         rightArrow.current.x = animConfig.frameWidth / 2 + 4 - Math.sin(t * 3) * 1.5;
       }
+
+      // Breathing — subtle Y-scale oscillation
+      const sprite = spriteRef.current;
+      if (sprite) {
+        const breathe = Math.sin(t * 2) * 0.02;
+        sprite.scale.y = 1.0 + breathe;
+        sprite.y = -breathe * animConfig.frameHeight * 0.5; // anchor compensation
+      }
+
+      // Shadow — scales inversely with bob height
+      const shadow = shadowRef.current;
+      if (shadow) {
+        const bobOffset = container.y - y;
+        const shadowScale = 1.0 - Math.abs(bobOffset) * 0.03;
+        shadow.scale.x = shadowScale;
+        shadow.alpha = 0.15 * shadowScale;
+      }
     },
     [y, status, animConfig.frameHeight, animConfig.frameWidth],
   );
@@ -181,8 +200,17 @@ export function AgentSprite({
       onPointerDown={handleClick}
       hitArea={hitArea}
     >
+      <pixiGraphics
+        ref={shadowRef}
+        draw={(g: Graphics) => {
+          g.clear();
+          g.ellipse(0, animConfig.frameHeight / 2 + 1, 8, 3);
+          g.fill({ color: 0x000000, alpha: 0.15 });
+        }}
+      />
       {texture && (
         <pixiSprite
+          ref={spriteRef}
           texture={texture}
           width={animConfig.frameWidth}
           height={animConfig.frameHeight}
