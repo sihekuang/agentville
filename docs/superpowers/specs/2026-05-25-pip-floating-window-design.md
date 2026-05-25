@@ -120,14 +120,6 @@ setPipActive: (active: boolean) => void
 
 This flag controls whether the main window shows the canvas or the placeholder.
 
-## New Files
-
-| File | Purpose |
-|------|---------|
-| `src/app/pip/page.tsx` | PIP route — renders canvas only |
-| `src/components/ui/PipPlaceholder.tsx` | Placeholder shown in main window during PIP |
-| `electron/pip.ts` | PIP window creation/management logic |
-
 ## Modified Files
 
 | File | Change |
@@ -138,11 +130,81 @@ This flag controls whether the main window shows the canvas or the placeholder.
 | `src/components/AppShell.tsx` | Conditionally render canvas vs placeholder based on `pipActive` |
 | `src/store/` | Add `pipActive` state |
 
+## Browser Support: Document Picture-in-Picture API
+
+When running as a web app (not Electron), PIP uses the Document Picture-in-Picture API (Chrome 116+, Edge).
+
+### How It Works
+
+```typescript
+const pipWindow = await documentPictureInPicture.requestWindow({
+  width: 400,
+  height: 300,
+});
+// Clone stylesheets into the PIP window
+// Render a new PixiJS canvas inside pipWindow.document.body
+```
+
+The API opens a browser-managed floating window that stays on top of other browser windows. It supports full interactive DOM content — not just video.
+
+### Differences from Electron PIP
+
+| Aspect | Electron | Browser |
+|--------|----------|---------|
+| Stays on top of | All apps | Browser windows only |
+| Visible on all workspaces | Yes | No |
+| Supported | Always (desktop app) | Chrome/Edge 116+ only |
+| Window controls | Custom × button | Browser-provided PIP chrome |
+| Activation | IPC to main process | Direct JS API call |
+
+### Environment Detection
+
+A `usePip()` hook abstracts the environment:
+
+```typescript
+function usePip() {
+  const isElectron = typeof window !== 'undefined' && 'electronAPI' in window;
+  
+  if (isElectron) {
+    // Use IPC-based Electron child window
+  } else if ('documentPictureInPicture' in window) {
+    // Use Document PiP API
+  } else {
+    // PIP not supported — hide the button
+  }
+}
+```
+
+### Browser-specific Flow
+
+1. User clicks PIP button (same button as Electron, in scene controls)
+2. Call `documentPictureInPicture.requestWindow({ width: 400, height: 300 })`
+3. Copy stylesheets from main document into the PIP window
+4. Mount a new React root in the PIP window with `AgentVilleScene`
+5. Main window swaps canvas for placeholder (same as Electron flow)
+6. On PIP window close (via `pagehide` event), restore canvas in main window
+
+### Browser Limitations
+
+- Only works in Chrome/Edge (no Safari/Firefox support as of 2026)
+- PIP window floats above browser windows but NOT above other apps
+- Browser may restrict PIP window size
+- Requires user gesture to activate (can't auto-open)
+
+## New Files (Updated)
+
+| File | Purpose |
+|------|---------|
+| `src/app/pip/page.tsx` | PIP route for Electron child window |
+| `src/components/ui/PipPlaceholder.tsx` | Placeholder shown in main window during PIP |
+| `src/hooks/usePip.ts` | Unified PIP hook — abstracts Electron vs browser |
+| `electron/pip.ts` | Electron PIP window creation/management |
+
 ## Out of Scope
 
 - Position/size memory between sessions
 - Opacity control
 - Minimap or simplified view
 - Cross-window agent selection sync
-- Native macOS PIP (video-only, no interaction)
-- Document Picture-in-Picture API (experimental, uncertain Electron support)
+- Native macOS video PIP (view-only, no interaction)
+- Safari/Firefox support (no Document PiP API)
