@@ -59,6 +59,7 @@ interface SceneContentProps {
   dynamicTheme: SceneTheme;
   agentList: import("@/store/agents").TrackedAgent[];
   selectedAgentId: string | null;
+  spriteTexture: import("pixi.js").Texture | null;
   handleAgentClick: (id: string) => void;
   handleAgentDoubleClick: (id: string) => void;
   isDark: boolean;
@@ -70,6 +71,7 @@ function SceneContent({
   dynamicTheme,
   agentList,
   selectedAgentId,
+  spriteTexture,
   handleAgentClick,
   handleAgentDoubleClick,
   isDark,
@@ -261,6 +263,7 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
           dynamicTheme={dynamicTheme}
           agentList={agentList}
           selectedAgentId={selectedAgentId}
+          spriteTexture={spriteTexture}
           handleAgentClick={handleAgentClick}
           handleAgentDoubleClick={handleAgentDoubleClick}
           isDark={isDark}
