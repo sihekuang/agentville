@@ -30,9 +30,9 @@ export default function PipPage() {
             className="absolute top-0 left-0 right-0 h-5 z-10"
             style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
           />
-          {/* Controls — visible on hover */}
+          {/* PIP window controls */}
           <div
-            className="absolute top-1 right-1 z-20 flex gap-1 opacity-0 hover:opacity-100 transition-opacity"
+            className="absolute top-1 right-1 z-20 flex gap-1"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <button
