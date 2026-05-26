@@ -8,25 +8,20 @@ import {
   NullPipBackend,
   type PipBackendAdapter,
 } from "@/lib/pip-backend";
-import type { ElectronPipAPI } from "@/lib/pip-types";
 
-function makeMockElectronAPI(): ElectronPipAPI & {
-  pipActivate: ReturnType<typeof vi.fn>;
-  pipDeactivate: ReturnType<typeof vi.fn>;
-  pipFocusMain: ReturnType<typeof vi.fn>;
-} {
+function makeMockElectronAPI() {
   return {
-    pipActivate: vi.fn(),
-    pipDeactivate: vi.fn(),
-    pipFocusMain: vi.fn(),
-    onPipActivated: vi.fn(() => () => {}),
-    onPipDeactivated: vi.fn(() => () => {}),
+    pipActivate: vi.fn() as unknown as () => void,
+    pipDeactivate: vi.fn() as unknown as () => void,
+    pipFocusMain: vi.fn() as unknown as () => void,
+    onPipActivated: vi.fn((_cb: () => void) => () => {}) as (cb: () => void) => () => void,
+    onPipDeactivated: vi.fn((_cb: () => void) => () => {}) as (cb: () => void) => () => void,
   };
 }
 
 function makeWrapper(backend: PipBackendAdapter) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(PipProvider, { backend }, children);
+    return createElement(PipProvider, { backend, children });
   };
 }
 
@@ -64,7 +59,7 @@ describe("usePip", () => {
     await act(async () => {
       await result.current.activate();
     });
-    expect(mockAPI.pipActivate).toHaveBeenCalledOnce();
+    expect(vi.mocked(mockAPI.pipActivate)).toHaveBeenCalledOnce();
   });
 
   it("deactivate() delegates to backend when active", async () => {
@@ -72,18 +67,18 @@ describe("usePip", () => {
     const { result } = renderHook(() => usePip(), {
       wrapper: makeWrapper(new ElectronPipBackend()),
     });
-    // Activate first
     await act(async () => {
       await result.current.activate();
     });
     // Simulate IPC callback
-    const onActivated = mockAPI.onPipActivated.mock.calls[0]?.[0];
-    if (onActivated) act(() => onActivated());
+    const onActivatedMock = vi.mocked(mockAPI.onPipActivated);
+    const activatedCb = onActivatedMock.mock.calls[0]?.[0];
+    if (activatedCb) act(() => activatedCb());
 
     await act(async () => {
       await result.current.deactivate();
     });
-    expect(mockAPI.pipDeactivate).toHaveBeenCalledOnce();
+    expect(vi.mocked(mockAPI.pipDeactivate)).toHaveBeenCalledOnce();
   });
 
   it("focusMain() delegates to backend", () => {
@@ -92,7 +87,7 @@ describe("usePip", () => {
       wrapper: makeWrapper(new ElectronPipBackend()),
     });
     result.current.focusMain();
-    expect(mockAPI.pipFocusMain).toHaveBeenCalledOnce();
+    expect(vi.mocked(mockAPI.pipFocusMain)).toHaveBeenCalledOnce();
   });
 
   it("focusMain() is safe with NullPipBackend", () => {

@@ -104,7 +104,7 @@ export class NullPipBackend implements PipBackendAdapter {
   activate(): Promise<void> { return Promise.resolve(); }
   deactivate(): Promise<void> { return Promise.resolve(); }
   focusMain(): void {}
-  subscribe(): () => void { return () => {}; }
+  subscribe(_onActivated: () => void, _onDeactivated: () => void): () => void { return () => {}; }
 }
 
 export type PipBackendName = "electron" | "browser" | "none";
