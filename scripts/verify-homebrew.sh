@@ -17,8 +17,8 @@ echo ""
 
 # 1. Check formula file exists
 echo "[1/8] Checking Homebrew formula..."
-if [ -f "$PROJECT_DIR/homebrew/agentville.rb" ]; then
-  pass "Formula file exists at homebrew/agentville.rb"
+if [ -f "$PROJECT_DIR/HomebrewFormula/agentville.rb" ]; then
+  pass "Formula file exists at HomebrewFormula/agentville.rb"
 else
   fail "Formula file missing"
 fi
@@ -48,7 +48,7 @@ fi
 
 # 4. Check formula doesn't configure port 3000
 echo "[4/8] Checking formula for port 3000 as a configured value..."
-if grep -E '(PORT.*=.*3000|"3000"|:3000)' "$PROJECT_DIR/homebrew/agentville.rb" 2>/dev/null | grep -vq '#'; then
+if grep -E '(PORT.*=.*3000|"3000"|:3000)' "$PROJECT_DIR/HomebrewFormula/agentville.rb" 2>/dev/null | grep -vq '#'; then
   fail "Formula configures port 3000"
 else
   pass "Formula does not configure port 3000"

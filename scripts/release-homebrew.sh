@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-FORMULA="$PROJECT_DIR/homebrew/agentville.rb"
+FORMULA="$PROJECT_DIR/HomebrewFormula/agentville.rb"
 
 VERSION=$(node -p "require('$PROJECT_DIR/package.json').version")
 TAG="v$VERSION"
@@ -68,23 +68,9 @@ echo ""
 git -C "$PROJECT_DIR" add "$FORMULA"
 git -C "$PROJECT_DIR" commit -m "chore: update Homebrew formula for $TAG"
 
-# Push formula to the Homebrew tap repo
-TAP_REPO="sihekuang/homebrew-agentville"
-echo "Pushing formula to tap repo ($TAP_REPO)..."
-TAP_DIR=$(mktemp -d)
-if git clone --depth 1 "https://github.com/$TAP_REPO.git" "$TAP_DIR" 2>/dev/null; then
-  cp "$FORMULA" "$TAP_DIR/Formula/agentville.rb"
-  git -C "$TAP_DIR" add Formula/agentville.rb
-  git -C "$TAP_DIR" commit -m "Update agentville to $TAG"
-  git -C "$TAP_DIR" push origin main
-  echo "Tap repo updated."
-  rm -rf "$TAP_DIR"
-else
-  echo "WARNING: Could not clone tap repo. Update it manually:"
-  echo "  cp homebrew/agentville.rb <tap-repo>/Formula/agentville.rb"
-  rm -rf "$TAP_DIR"
-fi
-
 echo ""
-echo "Done! Users can install with:"
-echo "  brew install sihekuang/agentville/agentville"
+echo "Done! Push this branch and merge to main."
+echo ""
+echo "Users install with:"
+echo "  brew tap sihekuang/agentville https://github.com/sihekuang/agentville.git"
+echo "  brew install agentville"
