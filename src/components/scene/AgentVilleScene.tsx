@@ -81,12 +81,13 @@ function SceneContent({
   const { app, isInitialised } = useApplication();
   const viewportRef = useRef<Viewport | null>(null);
   const containerRef = useRef<Container>(null);
+  const innerRef = useRef<Container>(null);
 
   const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
   const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
 
   useEffect(() => {
-    if (!isInitialised || !containerRef.current) return;
+    if (!isInitialised || !containerRef.current || !innerRef.current) return;
 
     if (viewportRef.current) {
       viewportRef.current.destroy({ children: false });
@@ -116,10 +117,7 @@ function SceneContent({
     vp.fit(true, worldW, worldH);
     vp.moveCenter(worldW / 2, worldH / 2);
 
-    const parent = containerRef.current;
-    while (parent.children.length > 0) {
-      vp.addChild(parent.children[0]);
-    }
+    vp.addChild(innerRef.current);
     app.stage.addChild(vp);
 
     // Re-fit viewport when app resizes
@@ -135,10 +133,8 @@ function SceneContent({
 
     return () => {
       app.renderer?.off("resize", onResize);
-      if (vp.children.length > 0 && parent) {
-        while (vp.children.length > 0) {
-          parent.addChild(vp.children[0]);
-        }
+      if (innerRef.current && vp.children.includes(innerRef.current)) {
+        vp.removeChild(innerRef.current);
       }
       vp.destroy({ children: false });
       viewportRef.current = null;
@@ -162,28 +158,30 @@ function SceneContent({
 
   return (
     <pixiContainer ref={containerRef}>
-      <Tilemap theme={dynamicTheme} agentCount={agentList.length} />
-      {agentList.map((agent, index) => {
-        const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
-        return (
-          <AgentSprite
-            key={agent.sessionId}
-            x={slot.x * dynamicTheme.tileSize}
-            y={slot.y * dynamicTheme.tileSize}
-            sessionId={agent.sessionId}
-            cwd={agent.cwd}
-            currentAction={agent.currentAction}
-            status={agent.status}
-            animConfig={dynamicTheme.agent}
-            baseTexture={spriteTexture}
-            onClick={handleAgentClick}
-            onDoubleClick={handleAgentDoubleClick}
-            isSelected={selectedAgentId === agent.sessionId}
-            isDark={isDark}
-            themeName={themeName}
-          />
-        );
-      })}
+      <pixiContainer ref={innerRef}>
+        <Tilemap theme={dynamicTheme} agentCount={agentList.length} />
+        {agentList.map((agent, index) => {
+          const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
+          return (
+            <AgentSprite
+              key={agent.sessionId}
+              x={slot.x * dynamicTheme.tileSize}
+              y={slot.y * dynamicTheme.tileSize}
+              sessionId={agent.sessionId}
+              cwd={agent.cwd}
+              currentAction={agent.currentAction}
+              status={agent.status}
+              animConfig={dynamicTheme.agent}
+              baseTexture={spriteTexture}
+              onClick={handleAgentClick}
+              onDoubleClick={handleAgentDoubleClick}
+              isSelected={selectedAgentId === agent.sessionId}
+              isDark={isDark}
+              themeName={themeName}
+            />
+          );
+        })}
+      </pixiContainer>
     </pixiContainer>
   );
 }
