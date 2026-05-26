@@ -38,7 +38,8 @@ if [ -n "$APP_DIR" ]; then
   # electron-builder's signing pass. CSC_NAME is set in CI env.
   if [ -n "${CSC_NAME:-}" ]; then
     echo "=== Re-signing after node_modules injection ==="
-    codesign --sign "$CSC_NAME" --force --deep --options runtime "$APP_DIR"
+    codesign --sign "$CSC_NAME" --force --deep --options runtime \
+      --entitlements electron/entitlements.mac.plist "$APP_DIR"
     echo "Re-signed $APP_DIR"
   fi
 fi
