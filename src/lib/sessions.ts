@@ -75,7 +75,7 @@ export function getTranscriptPath(
   cwd: string,
   sessionId: string
 ): string | null {
-  const escaped = cwd.replace(/\//g, "-");
+  const escaped = cwd.replace(/[/.]/g, "-");
   const jsonlPath = path.join(projectsDir, escaped, `${sessionId}.jsonl`);
   if (fs.existsSync(jsonlPath)) return jsonlPath;
   return null;

@@ -17,7 +17,7 @@ interface RawTranscriptLine {
   sessionId?: string;
   uuid?: string;
   parentUuid?: string;
-  timestamp?: number;
+  timestamp?: number | string;
   isSidechain?: boolean;
 }
 
@@ -35,7 +35,8 @@ export function parseTranscriptLine(line: string): TranscriptEntry | null {
   if (!Array.isArray(content) || content.length === 0) return null;
 
   const block = content[0];
-  const timestamp = data.timestamp ?? Date.now();
+  const rawTs = data.timestamp;
+  const timestamp = typeof rawTs === "number" ? rawTs : rawTs ? new Date(rawTs).getTime() : Date.now();
 
   if (block.type === "tool_use") {
     const toolName = block.name ?? "unknown";
