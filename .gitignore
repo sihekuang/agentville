@@ -30,6 +30,10 @@
 /dist-electron/
 /.electron-standalone/
 
+# claude code / superpowers
+.claude/
+.superpowers/
+
 # misc
 .DS_Store
 *.pem

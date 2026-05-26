@@ -93,7 +93,7 @@ agentville/
 
 Run:
 ```bash
-cd /Users/daniel/Documents/Projects/agents-visual
+cd agents-visual
 npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes
 ```
 
