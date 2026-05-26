@@ -95,7 +95,7 @@ jobs:
         env:
           # electron-builder reads CSC_NAME to find the signing identity
           # in the keychain we just set up.
-          CSC_NAME: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          CSC_NAME: ${{ secrets.MACOS_SIGNING_IDENTITY_NAME }}
         run: bash scripts/build-electron.sh
 
       - name: Locate, verify, and zip AgentVille.app
