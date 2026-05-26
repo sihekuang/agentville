@@ -14,7 +14,7 @@ const AgentVilleScene = dynamic(
 
 export default function PipPage() {
   useAgentStream();
-  const { backend, focusMain, deactivate } = usePip();
+  const { backend, focusMain } = usePip();
   const isElectron = backend === "electron";
 
   return (
@@ -38,7 +38,7 @@ export default function PipPage() {
             </button>
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-destructive-foreground hover:bg-destructive transition-colors"
-              onClick={deactivate}
+              onClick={() => window.close()}
               title="Close PIP"
             >
               ×
