@@ -39,6 +39,8 @@ export function useAnimationFrames(
         t.source.scaleMode = "nearest";
         setBaseTexture(t);
       }
+    }).catch((err) => {
+      console.error(`[AgentSprite] Failed to load sprite: ${src}`, err);
     });
     return () => {
       cancelled = true;
