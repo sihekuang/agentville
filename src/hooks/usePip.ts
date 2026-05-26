@@ -16,6 +16,7 @@ export interface UsePipResult {
   activate: () => Promise<void>;
   deactivate: () => Promise<void>;
   toggle: () => Promise<void>;
+  focusMain: () => void;
 }
 
 function getBackend(): PipBackend | null {
@@ -105,6 +106,13 @@ export function usePip(): UsePipResult {
     }
   }, [store, activate, deactivate]);
 
+  const focusMain = useCallback(() => {
+    if (backend === "electron") {
+      getElectronAPI()?.pipFocusMain();
+    }
+    // Browser PIP: no reliable way to focus the opener tab
+  }, [backend]);
+
   return {
     supported: backend !== null,
     backend,
@@ -112,5 +120,6 @@ export function usePip(): UsePipResult {
     activate,
     deactivate,
     toggle,
+    focusMain,
   };
 }

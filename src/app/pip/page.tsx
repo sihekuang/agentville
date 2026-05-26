@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
-import { isElectron as checkElectron, getElectronAPI } from "@/lib/pip-types";
+import { usePip } from "@/hooks/usePip";
+import { isElectron as checkElectron } from "@/lib/pip-types";
 
 const AgentVilleScene = dynamic(
   () =>
@@ -15,6 +16,7 @@ const AgentVilleScene = dynamic(
 
 export default function PipPage() {
   useAgentStream();
+  const { focusMain, deactivate } = usePip();
 
   const [isElectron, setIsElectron] = useState(false);
   useEffect(() => {
@@ -35,14 +37,14 @@ export default function PipPage() {
           >
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-              onClick={() => getElectronAPI()?.pipFocusMain()}
+              onClick={focusMain}
               title="Show main window"
             >
               ↩
             </button>
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-destructive-foreground hover:bg-destructive transition-colors"
-              onClick={() => window.close()}
+              onClick={deactivate}
               title="Close PIP"
             >
               ×

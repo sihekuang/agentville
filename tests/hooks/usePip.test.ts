@@ -111,4 +111,17 @@ describe("usePip", () => {
     });
     expect(mockAPI.pipDeactivate).toHaveBeenCalledOnce();
   });
+
+  it("focusMain() calls electronAPI.pipFocusMain in electron mode", () => {
+    (window as any).electronAPI = mockAPI;
+    const { result } = renderHook(() => usePip());
+    result.current.focusMain();
+    expect(mockAPI.pipFocusMain).toHaveBeenCalledOnce();
+  });
+
+  it("focusMain() is a no-op when not in electron", () => {
+    const { result } = renderHook(() => usePip());
+    result.current.focusMain();
+    // Should not throw
+  });
 });
