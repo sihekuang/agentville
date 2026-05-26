@@ -198,7 +198,9 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   const theme = THEMES[themeName];
   const spriteTexture = useLoadTexture(theme.agent.src);
 
-  const agentList = Object.values(agents);
+  const agentList = Object.values(agents).sort((a, b) =>
+    a.sessionId.localeCompare(b.sessionId),
+  );
   const viewportInstanceRef = useRef<Viewport>(null);
 
   const layout = useMemo(
