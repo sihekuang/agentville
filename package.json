@@ -22,8 +22,10 @@
       "output": "dist"
     },
     "files": [
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "!**/node_modules/**"
     ],
+    "npmRebuild": false,
     "extraResources": [
       {
         "from": ".electron-standalone",

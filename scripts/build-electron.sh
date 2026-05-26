@@ -12,6 +12,11 @@ cp -r .next/static .electron-standalone/.next/static
 mkdir -p .electron-standalone/scripts/macos
 cp scripts/macos/*.applescript .electron-standalone/scripts/macos/
 
+echo "=== Pruning unnecessary native modules from standalone ==="
+# @img/sharp-* — image optimization binaries, not used (no next/image in this app)
+rm -rf .electron-standalone/node_modules/@img
+echo "Pruned @img (sharp) — saved ~16MB"
+
 echo "=== Compiling Electron ==="
 npx tsc -p electron/tsconfig.json
 
