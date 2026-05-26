@@ -7,6 +7,7 @@ describe("useAgentStore", () => {
       agents: {},
       selectedAgentId: null,
       theme: "office",
+      pipActive: false,
     });
   });
 
