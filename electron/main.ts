@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from "electron";
+import { setupPip, closePipWindow } from "./pip";
 
 app.commandLine.appendSwitch("remote-debugging-port", "9222");
 import { fork, type ChildProcess } from "child_process";
@@ -9,6 +10,8 @@ let mainWindow: BrowserWindow | null = null;
 let nextServer: ChildProcess | null = null;
 
 const IS_DEV = !app.isPackaged;
+
+let appPort = 3000;
 
 function getResourcePath(...segments: string[]): string {
   if (IS_DEV) {
@@ -105,6 +108,7 @@ function createWindow(port: number) {
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  setupPip(mainWindow, () => appPort);
 
   if (IS_DEV) {
     mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -122,16 +126,17 @@ function createWindow(port: number) {
 
 app.on("ready", async () => {
   if (IS_DEV) {
-    const port = parseInt(process.env.DEV_PORT ?? "3000", 10);
-    createWindow(port);
+    appPort = parseInt(process.env.DEV_PORT ?? "3000", 10);
+    createWindow(appPort);
   } else {
-    const port = await findFreePort();
-    await startNextServer(port);
-    createWindow(port);
+    appPort = await findFreePort();
+    await startNextServer(appPort);
+    createWindow(appPort);
   }
 });
 
 app.on("window-all-closed", () => {
+  closePipWindow();
   nextServer?.kill();
   app.quit();
 });
