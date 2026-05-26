@@ -11,7 +11,7 @@ let nextServer: ChildProcess | null = null;
 
 const IS_DEV = !app.isPackaged;
 
-let appPort = 3000;
+let appPort = 4200;
 
 function getResourcePath(...segments: string[]): string {
   if (IS_DEV) {
@@ -125,7 +125,7 @@ function createWindow(port: number) {
 
 app.on("ready", async () => {
   if (IS_DEV) {
-    appPort = parseInt(process.env.DEV_PORT ?? "3000", 10);
+    appPort = parseInt(process.env.DEV_PORT ?? "4200", 10);
     createWindow(appPort);
   } else {
     appPort = await findFreePort();

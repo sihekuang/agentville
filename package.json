@@ -9,15 +9,18 @@
     "url": "https://github.com/sihekuang/agentville.git"
   },
   "main": "dist-electron/main.js",
+  "bin": {
+    "agentville": "./bin/agentville"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 4200",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 4200",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "electron:dev": "concurrently --kill-others \"next dev\" \"wait-on http://127.0.0.1:3000 && npx tsc -p electron/tsconfig.json && electron .\"",
+    "electron:dev": "concurrently --kill-others \"next dev --port 4200\" \"wait-on http://127.0.0.1:4200 && npx tsc -p electron/tsconfig.json && DEV_PORT=4200 electron .\"",
     "electron:build": "bash scripts/build-electron.sh",
     "electron:start": "npx tsc -p electron/tsconfig.json && electron ."
   },

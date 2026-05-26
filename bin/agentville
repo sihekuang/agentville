@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+AGENTVILLE_PORT="${AGENTVILLE_PORT:-4200}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [ ! -d "$APP_DIR/.next" ]; then
+  echo "Building AgentVille..."
+  cd "$APP_DIR"
+  npm run build
+fi
+
+echo "Starting AgentVille on http://localhost:${AGENTVILLE_PORT}"
+PORT="$AGENTVILLE_PORT" node "$APP_DIR/.next/standalone/server.js"
