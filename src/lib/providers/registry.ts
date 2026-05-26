@@ -1,3 +1,4 @@
+import os from "os";
 import type { AgentProvider } from "./provider";
 import type { DiscoveredAgent } from "./types";
 import { ClaudeCodeProvider } from "./claude-code";
@@ -34,6 +35,9 @@ export function getRegistry(): ProviderRegistry {
     instance.register(new ClaudeCodeProvider());
     // Future: instance.register(new CodexProvider());
     // Future: instance.register(new GeminiCliProvider());
+
+    const home = process.env.HOME || os.homedir();
+    console.log(`[agentville] provider registry initialized — watching ${home}/.claude/sessions/`);
   }
   return instance;
 }

@@ -135,8 +135,8 @@ export async function GET(): Promise<Response> {
               );
             }
           }
-        } catch {
-          // continue polling
+        } catch (err) {
+          console.error("[agentville] discovery poll error:", (err as Error).message);
         }
 
         if (!cancelled) {

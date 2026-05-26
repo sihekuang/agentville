@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import type { HostApp, RawIdeLock } from "./types";
 import { getPlatform } from "./platform";
@@ -74,7 +75,7 @@ export function resolveHostApp(
   if (hostAppCache.has(cacheKey)) return hostAppCache.get(cacheKey)!;
 
   const ideLockDir =
-    ideDir ?? path.join(process.env.HOME ?? "~", ".claude", "ide");
+    ideDir ?? path.join(process.env.HOME || os.homedir(), ".claude", "ide");
   const ideLocks = readIdeLockDir(ideLockDir);
   for (const lock of ideLocks) {
     if (lock.workspaceFolders.some((ws) => cwd.startsWith(ws))) {
