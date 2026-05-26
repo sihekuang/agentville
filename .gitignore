@@ -34,6 +34,11 @@
 .claude/
 .superpowers/
 
+# internal dev notes
+docs/dev-notes/
+docs/superpowers/
+scripts/macos/restart-dev-server.applescript
+
 # misc
 .DS_Store
 *.pem
