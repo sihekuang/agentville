@@ -1,4 +1,4 @@
-# agents-visual
+# AgentVille
 
 A real-time visualization dashboard for Claude Code agents. It discovers running Claude Code sessions on your machine and renders each agent as a pixel-art sprite in a themed isometric scene, showing what every agent is doing at a glance.
 

@@ -1,12 +1,12 @@
 {
-  "name": "agents-visual",
+  "name": "agentville",
   "version": "0.5.0",
   "description": "Real-time visualization dashboard for AI coding agents",
   "author": "Daniel Lee",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sihekuang/agents-visual.git"
+    "url": "https://github.com/sihekuang/agentville.git"
   },
   "main": "dist-electron/main.js",
   "scripts": {
