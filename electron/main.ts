@@ -147,6 +147,9 @@ app.on("before-quit", () => {
 
 app.on("activate", () => {
   if (mainWindow === null) {
-    // Re-creating requires knowing the port; for v1 this is acceptable
+    createWindow(appPort);
+  } else {
+    mainWindow.show();
+    mainWindow.focus();
   }
 });
