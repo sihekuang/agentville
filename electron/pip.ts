@@ -1,7 +1,6 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import path from "path";
 
-// IPC channel names — keep in sync with src/lib/pip-types.ts IPC constants.
 const IPC = {
   PIP_ACTIVATE: "pip:activate",
   PIP_DEACTIVATE: "pip:deactivate",
@@ -19,7 +18,13 @@ const PIP_ROUTE = "/pip";
 
 let pipWindow: BrowserWindow | null = null;
 
-export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
+export interface PipSetupOptions {
+  getMainWindow: () => BrowserWindow | null;
+  ensureMainWindow: () => BrowserWindow;
+  getPort: () => number;
+}
+
+export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupOptions) {
   ipcMain.on(IPC.PIP_ACTIVATE, () => {
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.focus();
@@ -55,21 +60,32 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
     pipWindow.loadURL(`http://127.0.0.1:${port}${PIP_ROUTE}`);
 
     pipWindow.once("ready-to-show", () => {
-      mainWindow.webContents.send(IPC.PIP_ACTIVATED);
+      const main = getMainWindow();
+      if (main && !main.isDestroyed()) {
+        main.webContents.send(IPC.PIP_ACTIVATED);
+      }
     });
 
     pipWindow.on("closed", () => {
       pipWindow = null;
-      if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(IPC.PIP_DEACTIVATED);
+      const main = getMainWindow();
+      if (main && !main.isDestroyed()) {
+        main.webContents.send(IPC.PIP_DEACTIVATED);
       }
     });
   });
 
   ipcMain.on(IPC.PIP_FOCUS_MAIN, () => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
+    const main = getMainWindow();
+    if (main && !main.isDestroyed()) {
+      main.show();
+      main.focus();
+    } else {
+      const newMain = ensureMainWindow();
+      newMain.once("ready-to-show", () => {
+        newMain.show();
+        newMain.focus();
+      });
     }
   });
 

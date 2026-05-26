@@ -108,7 +108,6 @@ function createWindow(port: number) {
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);
-  setupPip(mainWindow, () => appPort);
 
   if (IS_DEV) {
     mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -133,6 +132,15 @@ app.on("ready", async () => {
     await startNextServer(appPort);
     createWindow(appPort);
   }
+
+  setupPip({
+    getMainWindow: () => mainWindow,
+    ensureMainWindow: () => {
+      if (!mainWindow) createWindow(appPort);
+      return mainWindow!;
+    },
+    getPort: () => appPort,
+  });
 });
 
 app.on("window-all-closed", () => {
