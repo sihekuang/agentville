@@ -13,21 +13,18 @@ interface AgentStore {
   agents: Record<string, TrackedAgent>;
   selectedAgentId: string | null;
   theme: Theme;
-  pipActive: boolean;
 
   addAgent: (agent: AgentState | TrackedAgent) => void;
   removeAgent: (sessionId: string) => void;
   updateAgent: (agent: AgentState | TrackedAgent) => void;
   selectAgent: (sessionId: string | null) => void;
   setTheme: (theme: Theme) => void;
-  setPipActive: (active: boolean) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
   agents: {},
   selectedAgentId: null,
   theme: "office",
-  pipActive: false,
 
   addAgent: (agent) =>
     set((state) => ({
@@ -52,6 +49,4 @@ export const useAgentStore = create<AgentStore>((set) => ({
   selectAgent: (sessionId) => set({ selectedAgentId: sessionId }),
 
   setTheme: (theme) => set({ theme }),
-
-  setPipActive: (active) => set({ pipActive: active }),
 }));

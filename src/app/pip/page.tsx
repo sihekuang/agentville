@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
 import { usePip } from "@/hooks/usePip";
-import { isElectron as checkElectron } from "@/lib/pip-types";
 
 const AgentVilleScene = dynamic(
   () =>
@@ -16,12 +14,8 @@ const AgentVilleScene = dynamic(
 
 export default function PipPage() {
   useAgentStream();
-  const { focusMain, deactivate } = usePip();
-
-  const [isElectron, setIsElectron] = useState(false);
-  useEffect(() => {
-    if (checkElectron()) setIsElectron(true);
-  }, []);
+  const { backend, focusMain, deactivate } = usePip();
+  const isElectron = backend === "electron";
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-background relative">
