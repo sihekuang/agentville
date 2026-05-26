@@ -64,11 +64,27 @@ echo "Updated homebrew/agentville.rb:"
 grep -E 'url |sha256 ' "$FORMULA"
 echo ""
 
-# Commit the formula update
+# Commit the formula update in the main repo
 git -C "$PROJECT_DIR" add "$FORMULA"
 git -C "$PROJECT_DIR" commit -m "chore: update Homebrew formula for $TAG"
+
+# Push formula to the Homebrew tap repo
+TAP_REPO="sihekuang/homebrew-agentville"
+echo "Pushing formula to tap repo ($TAP_REPO)..."
+TAP_DIR=$(mktemp -d)
+if git clone --depth 1 "https://github.com/$TAP_REPO.git" "$TAP_DIR" 2>/dev/null; then
+  cp "$FORMULA" "$TAP_DIR/Formula/agentville.rb"
+  git -C "$TAP_DIR" add Formula/agentville.rb
+  git -C "$TAP_DIR" commit -m "Update agentville to $TAG"
+  git -C "$TAP_DIR" push origin main
+  echo "Tap repo updated."
+  rm -rf "$TAP_DIR"
+else
+  echo "WARNING: Could not clone tap repo. Update it manually:"
+  echo "  cp homebrew/agentville.rb <tap-repo>/Formula/agentville.rb"
+  rm -rf "$TAP_DIR"
+fi
+
 echo ""
-echo "Done! Next steps:"
-echo "  1. Push this branch and merge to main"
-echo "  2. Copy homebrew/agentville.rb to your Homebrew tap repo"
-echo "  3. Users install with: brew install $REPO"
+echo "Done! Users can install with:"
+echo "  brew install sihekuang/agentville/agentville"
