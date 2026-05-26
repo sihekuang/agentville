@@ -171,7 +171,7 @@ function SceneContent({
   );
 }
 
-export function AgentVilleScene() {
+export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   const agents = useAgentStore((s) => s.agents);
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
   const selectAgent = useAgentStore((s) => s.selectAgent);
@@ -269,7 +269,7 @@ export function AgentVilleScene() {
       </Application>
       )}
       <div className="absolute bottom-3 right-3 flex gap-1">
-        {pipSupported && (
+        {pipSupported && !isPip && (
           <button
             onClick={activatePip}
             className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"

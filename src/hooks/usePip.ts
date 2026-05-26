@@ -65,15 +65,19 @@ export function usePip(): UsePipResult {
 
       // Embed the /pip route as an iframe — it's a full Next.js page
       // with theme provider, PixiJS, and agent streaming built in.
-      pipWin.document.body.style.margin = "0";
-      pipWin.document.body.style.overflow = "hidden";
+      const pipDoc = pipWin.document;
+      pipDoc.documentElement.style.height = "100%";
+      pipDoc.body.style.margin = "0";
+      pipDoc.body.style.overflow = "hidden";
+      pipDoc.body.style.height = "100%";
 
-      const iframe = pipWin.document.createElement("iframe");
+      const iframe = pipDoc.createElement("iframe");
       iframe.src = "/pip";
       iframe.style.width = "100%";
       iframe.style.height = "100%";
       iframe.style.border = "none";
-      pipWin.document.body.appendChild(iframe);
+      iframe.style.display = "block";
+      pipDoc.body.appendChild(iframe);
 
       pipWin.addEventListener("pagehide", () => {
         pipWindowRef.current = null;
