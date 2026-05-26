@@ -18,14 +18,41 @@ A real-time visualization dashboard for Claude Code agents. It discovers running
 - **Tailwind CSS 4** + shadcn/ui components
 - **Vitest** (unit) + **Playwright** (E2E)
 
-## Getting Started
+## Install
+
+### Homebrew (macOS)
+
+```bash
+brew tap sihekuang/agentville https://github.com/sihekuang/agentville.git
+brew install agentville
+```
+
+Then run:
+
+```bash
+agentville
+```
+
+Open [http://localhost:4200](http://localhost:4200). To use a different port:
+
+```bash
+AGENTVILLE_PORT=8080 agentville
+```
+
+Or run as a background service:
+
+```bash
+brew services start agentville
+```
+
+### From source
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The app will automatically discover any running Claude Code sessions.
+Open [http://localhost:4200](http://localhost:4200). The app will automatically discover any running Claude Code sessions.
 
 ### macOS Accessibility Permission
 
