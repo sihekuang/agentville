@@ -131,7 +131,7 @@ function SceneContent({
     onViewportReady(vp);
 
     return () => {
-      app.renderer.off("resize", onResize);
+      app.renderer?.off("resize", onResize);
       if (vp.children.length > 0 && parent) {
         while (vp.children.length > 0) {
           parent.addChild(vp.children[0]);
