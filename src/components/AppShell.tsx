@@ -3,11 +3,9 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
-import { useAgentStore } from "@/store/agents";
 import { usePip } from "@/hooks/usePip";
 import { Header } from "./ui/Header";
 import { SidePanel } from "./ui/SidePanel";
-import { PipPlaceholder } from "./ui/PipPlaceholder";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -24,8 +22,7 @@ const AgentVilleScene = dynamic(
 
 export function AppShell() {
   useAgentStream();
-  const pipActive = useAgentStore((s) => s.pipActive);
-  const { deactivate, toggle } = usePip();
+  const { toggle } = usePip();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -44,11 +41,7 @@ export function AppShell() {
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize="65%" minSize="30%">
           <main className="bg-background h-full overflow-hidden p-4">
-            {pipActive ? (
-              <PipPlaceholder onRedock={deactivate} />
-            ) : (
-              <AgentVilleScene />
-            )}
+            <AgentVilleScene />
           </main>
         </ResizablePanel>
         <ResizableHandle withHandle />
