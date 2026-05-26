@@ -23,8 +23,7 @@ interface AgentStore {
   setPipActive: (active: boolean) => void;
 }
 
-const _createStore = () =>
-  create<AgentStore>((set) => ({
+export const useAgentStore = create<AgentStore>((set) => ({
   agents: {},
   selectedAgentId: null,
   theme: "office",
@@ -56,12 +55,3 @@ const _createStore = () =>
 
   setPipActive: (active) => set({ pipActive: active }),
 }));
-
-// Use a global singleton so re-imports (e.g. after vi.resetModules()) share state
-declare global {
-  // eslint-disable-next-line no-var
-  var __agentStore: ReturnType<typeof _createStore> | undefined;
-}
-
-export const useAgentStore: ReturnType<typeof _createStore> =
-  globalThis.__agentStore ?? (globalThis.__agentStore = _createStore());
