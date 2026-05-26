@@ -22,9 +22,9 @@ npx tsc -p electron/tsconfig.json
 
 echo "=== Packaging with electron-builder ==="
 if [ -n "${ELECTRON_BUILDER_ARCH:-}" ]; then
-  npx electron-builder --mac --${ELECTRON_BUILDER_ARCH}
+  npx electron-builder --mac --${ELECTRON_BUILDER_ARCH} --publish never
 else
-  npx electron-builder --mac
+  npx electron-builder --mac --publish never
 fi
 
 echo "=== Injecting standalone node_modules ==="
