@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import os from "os";
 import path from "path";
 import fs from "fs";
 import { resolveHostApp } from "@/lib/host-app";
 import { focusWindow } from "@/lib/focus-window";
 import type { RawSessionFile } from "@/lib/types";
 
-const CLAUDE_HOME = path.join(process.env.HOME ?? "~", ".claude");
+const CLAUDE_HOME = path.join(process.env.HOME || os.homedir(), ".claude");
 const SESSIONS_DIR = path.join(CLAUDE_HOME, "sessions");
 
 export async function POST(

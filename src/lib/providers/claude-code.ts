@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import type { AgentProvider } from "./provider";
 import type { DiscoveredAgent, NormalizedAction, ActivityEntry } from "./types";
@@ -82,8 +83,8 @@ export class ClaudeCodeProvider implements AgentProvider {
   private readonly projectsDir: string;
 
   constructor(claudeHome?: string) {
-    this.claudeHome =
-      claudeHome ?? path.join(process.env.HOME ?? "~", ".claude");
+    const home = process.env.HOME || os.homedir();
+    this.claudeHome = claudeHome ?? path.join(home, ".claude");
     this.sessionsDir = path.join(this.claudeHome, "sessions");
     this.projectsDir = path.join(this.claudeHome, "projects");
   }
@@ -121,8 +122,8 @@ export class ClaudeCodeProvider implements AgentProvider {
           if (entry) allEntries.push(entry);
         }
         recentTranscript = allEntries.slice(-MAX_RECENT_ACTIONS);
-      } catch {
-        // transcript not available
+      } catch (err) {
+        console.warn(`[agentville] failed to read transcript for ${session.sessionId.slice(0, 8)}:`, (err as Error).message);
       }
     }
 

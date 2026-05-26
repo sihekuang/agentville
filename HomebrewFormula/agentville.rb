@@ -52,7 +52,7 @@ class Agentville < Formula
 
   service do
     run [opt_bin/"agentville"]
-    environment_variables PORT: "4200"
+    environment_variables HOME: Dir.home, PORT: "4200"
     keep_alive true
     log_path var/"log/agentville.log"
     error_log_path var/"log/agentville-error.log"

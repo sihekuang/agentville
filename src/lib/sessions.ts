@@ -29,18 +29,23 @@ export async function discoverSessions(
   let files: string[];
   try {
     files = fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".json"));
-  } catch {
+  } catch (err) {
+    console.warn(`[agentville] cannot read sessions dir ${sessionsDir}:`, (err as Error).message);
     return [];
   }
 
   const sessions: DiscoveredSession[] = [];
+  let deadCount = 0;
 
   for (const file of files) {
     try {
       const raw = fs.readFileSync(path.join(sessionsDir, file), "utf-8");
       const data: RawSessionFile = JSON.parse(raw);
 
-      if (!isPidAlive(data.pid)) continue;
+      if (!isPidAlive(data.pid)) {
+        deadCount++;
+        continue;
+      }
 
       sessions.push({
         pid: data.pid,
@@ -52,9 +57,14 @@ export async function discoverSessions(
         entrypoint: data.entrypoint,
         version: data.version,
       });
-    } catch {
+    } catch (err) {
+      console.warn(`[agentville] failed to parse session file ${file}:`, (err as Error).message);
       continue;
     }
+  }
+
+  if (sessions.length > 0 || deadCount > 0) {
+    console.log(`[agentville] sessions: ${sessions.length} alive, ${deadCount} dead, ${files.length} total files`);
   }
 
   return sessions;
