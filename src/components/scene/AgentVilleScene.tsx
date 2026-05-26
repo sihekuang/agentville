@@ -145,6 +145,19 @@ function SceneContent({
     };
   }, [app, isInitialised, worldW, worldH, onViewportReady]);
 
+  // When React adds new children (e.g. a new AgentSprite) to containerRef but
+  // worldW/worldH haven't changed, the viewport effect doesn't re-run, leaving
+  // the new child outside the viewport (rendered at raw world coords). This
+  // effect sweeps any stranded children into the viewport after every render.
+  useEffect(() => {
+    const vp = viewportRef.current;
+    const parent = containerRef.current;
+    if (!vp || !parent) return;
+    while (parent.children.length > 0) {
+      vp.addChild(parent.children[0]);
+    }
+  });
+
   if (!isInitialised) return null;
 
   return (
@@ -185,7 +198,9 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   const theme = THEMES[themeName];
   const spriteTexture = useLoadTexture(theme.agent.src);
 
-  const agentList = Object.values(agents);
+  const agentList = Object.values(agents).sort((a, b) =>
+    a.sessionId.localeCompare(b.sessionId),
+  );
   const viewportInstanceRef = useRef<Viewport>(null);
 
   const layout = useMemo(
