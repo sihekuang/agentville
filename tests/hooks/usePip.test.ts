@@ -3,6 +3,11 @@ import { renderHook, act } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { PipProvider } from "@/contexts/PipContext";
 import { usePip } from "@/hooks/usePip";
+import {
+  ElectronPipBackend,
+  NullPipBackend,
+  type PipBackendAdapter,
+} from "@/lib/pip-backend";
 import type { ElectronPipAPI } from "@/lib/pip-types";
 
 function makeMockElectronAPI(): ElectronPipAPI & {
@@ -19,8 +24,10 @@ function makeMockElectronAPI(): ElectronPipAPI & {
   };
 }
 
-function wrapper({ children }: { children: ReactNode }) {
-  return createElement(PipProvider, null, children);
+function makeWrapper(backend: PipBackendAdapter) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(PipProvider, { backend }, children);
+  };
 }
 
 describe("usePip", () => {
@@ -32,76 +39,97 @@ describe("usePip", () => {
     delete (window as any).documentPictureInPicture;
   });
 
-  it("returns supported: false when no PIP API available", () => {
-    const { result } = renderHook(() => usePip(), { wrapper });
+  it("returns supported: false with NullPipBackend", () => {
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new NullPipBackend()),
+    });
     expect(result.current.supported).toBe(false);
     expect(result.current.backend).toBeNull();
   });
 
-  it("returns backend: electron when electronAPI is present", () => {
+  it("returns backend: electron with ElectronPipBackend", () => {
     (window as any).electronAPI = mockAPI;
-    const { result } = renderHook(() => usePip(), { wrapper });
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new ElectronPipBackend()),
+    });
     expect(result.current.supported).toBe(true);
     expect(result.current.backend).toBe("electron");
   });
 
-  it("returns backend: browser when documentPictureInPicture is present", () => {
-    (window as any).documentPictureInPicture = { requestWindow: vi.fn() };
-    const { result } = renderHook(() => usePip(), { wrapper });
-    expect(result.current.supported).toBe(true);
-    expect(result.current.backend).toBe("browser");
-  });
-
-  it("prefers electron over browser when both available", () => {
+  it("activate() delegates to backend", async () => {
     (window as any).electronAPI = mockAPI;
-    (window as any).documentPictureInPicture = { requestWindow: vi.fn() };
-    const { result } = renderHook(() => usePip(), { wrapper });
-    expect(result.current.backend).toBe("electron");
-  });
-
-  it("activate() calls electronAPI.pipActivate in electron mode", async () => {
-    (window as any).electronAPI = mockAPI;
-    const { result } = renderHook(() => usePip(), { wrapper });
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new ElectronPipBackend()),
+    });
     await act(async () => {
       await result.current.activate();
     });
     expect(mockAPI.pipActivate).toHaveBeenCalledOnce();
   });
 
-  it("deactivate() calls electronAPI.pipDeactivate in electron mode", async () => {
+  it("deactivate() delegates to backend when active", async () => {
     (window as any).electronAPI = mockAPI;
-    const { result } = renderHook(() => usePip(), { wrapper });
-    // First activate
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new ElectronPipBackend()),
+    });
+    // Activate first
     await act(async () => {
       await result.current.activate();
     });
-    // Simulate the IPC callback setting active=true
+    // Simulate IPC callback
     const onActivated = mockAPI.onPipActivated.mock.calls[0]?.[0];
-    if (onActivated) {
-      act(() => onActivated());
-    }
+    if (onActivated) act(() => onActivated());
+
     await act(async () => {
       await result.current.deactivate();
     });
     expect(mockAPI.pipDeactivate).toHaveBeenCalledOnce();
   });
 
-  it("focusMain() calls electronAPI.pipFocusMain in electron mode", () => {
+  it("focusMain() delegates to backend", () => {
     (window as any).electronAPI = mockAPI;
-    const { result } = renderHook(() => usePip(), { wrapper });
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new ElectronPipBackend()),
+    });
     result.current.focusMain();
     expect(mockAPI.pipFocusMain).toHaveBeenCalledOnce();
   });
 
-  it("focusMain() is a no-op when not in electron", () => {
-    const { result } = renderHook(() => usePip(), { wrapper });
-    result.current.focusMain();
-    // Should not throw
+  it("focusMain() is safe with NullPipBackend", () => {
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(new NullPipBackend()),
+    });
+    expect(() => result.current.focusMain()).not.toThrow();
   });
 
   it("throws when used outside PipProvider", () => {
     expect(() => {
       renderHook(() => usePip());
     }).toThrow("usePipContext must be used within a PipProvider");
+  });
+
+  it("accepts a custom mock backend via DI", async () => {
+    const mockBackend: PipBackendAdapter = {
+      name: "test",
+      activate: vi.fn().mockResolvedValue(undefined),
+      deactivate: vi.fn().mockResolvedValue(undefined),
+      focusMain: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    };
+
+    const { result } = renderHook(() => usePip(), {
+      wrapper: makeWrapper(mockBackend),
+    });
+
+    expect(result.current.supported).toBe(true);
+    expect(result.current.backend).toBe("test");
+
+    await act(async () => {
+      await result.current.activate();
+    });
+    expect(mockBackend.activate).toHaveBeenCalledOnce();
+
+    result.current.focusMain();
+    expect(mockBackend.focusMain).toHaveBeenCalledOnce();
   });
 });

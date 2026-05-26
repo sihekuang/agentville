@@ -6,11 +6,10 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { detectBackend, type PipBackendAdapter } from "@/lib/pip-backend";
+import type { PipBackendAdapter } from "@/lib/pip-backend";
 
 export interface PipContextValue {
   supported: boolean;
@@ -24,43 +23,41 @@ export interface PipContextValue {
 
 const PipContext = createContext<PipContextValue | null>(null);
 
-export function PipProvider({ children }: { children: ReactNode }) {
-  const backendRef = useRef<PipBackendAdapter | null>(null);
+export interface PipProviderProps {
+  backend: PipBackendAdapter;
+  children: ReactNode;
+}
+
+export function PipProvider({ backend, children }: PipProviderProps) {
   const [active, setActive] = useState(false);
-  const [backendName, setBackendName] = useState("none");
 
   useEffect(() => {
-    const backend = detectBackend();
-    backendRef.current = backend;
-    setBackendName(backend.name);
-
     const unsubscribe = backend.subscribe(
       () => setActive(true),
       () => setActive(false),
     );
-
     return unsubscribe;
-  }, []);
+  }, [backend]);
 
   const activate = useCallback(async () => {
     if (active) return;
     try {
-      await backendRef.current?.activate();
-      if (backendRef.current?.name === "browser") {
+      await backend.activate();
+      if (backend.name === "browser") {
         setActive(true);
       }
     } catch (err) {
       console.error("[PIP] Failed to activate:", err);
     }
-  }, [active]);
+  }, [active, backend]);
 
   const deactivate = useCallback(async () => {
     if (!active) return;
-    await backendRef.current?.deactivate();
-    if (backendRef.current?.name === "browser") {
+    await backend.deactivate();
+    if (backend.name === "browser") {
       setActive(false);
     }
-  }, [active]);
+  }, [active, backend]);
 
   const toggle = useCallback(async () => {
     if (active) {
@@ -71,20 +68,20 @@ export function PipProvider({ children }: { children: ReactNode }) {
   }, [active, activate, deactivate]);
 
   const focusMain = useCallback(() => {
-    backendRef.current?.focusMain();
-  }, []);
+    backend.focusMain();
+  }, [backend]);
 
   const value = useMemo<PipContextValue>(
     () => ({
-      supported: backendName !== "none",
-      backendName,
+      supported: backend.name !== "none",
+      backendName: backend.name,
       active,
       activate,
       deactivate,
       toggle,
       focusMain,
     }),
-    [backendName, active, activate, deactivate, toggle, focusMain],
+    [backend.name, active, activate, deactivate, toggle, focusMain],
   );
 
   return <PipContext value={value}>{children}</PipContext>;

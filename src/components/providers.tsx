@@ -1,10 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { ThemeProvider } from "./theme-provider";
 import { PipProvider } from "@/contexts/PipContext";
+import { detectBackend, type PipBackendAdapter } from "@/lib/pip-backend";
 
-export function Providers({ children }: { children: ReactNode }) {
+export interface ProvidersProps {
+  children: ReactNode;
+  pipBackend?: PipBackendAdapter;
+}
+
+export function Providers({ children, pipBackend }: ProvidersProps) {
+  const backend = useMemo(() => pipBackend ?? detectBackend(), [pipBackend]);
+
   return (
     <ThemeProvider
       attribute="class"
@@ -12,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <PipProvider>{children}</PipProvider>
+      <PipProvider backend={backend}>{children}</PipProvider>
     </ThemeProvider>
   );
 }
