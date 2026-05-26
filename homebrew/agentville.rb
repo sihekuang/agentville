@@ -2,7 +2,7 @@ class Agentville < Formula
   desc "Real-time visualization dashboard for AI coding agents"
   homepage "https://github.com/sihekuang/agentville"
   url "https://github.com/sihekuang/agentville/archive/refs/tags/v0.5.0.tar.gz"
-  sha256 "" # populated during release
+  sha256 "8f331c9a3a1f64ab59e8c6a66fc2ba92c1ef4466591546c2d2adb21b62ffec4d"
   license "MIT"
 
   depends_on "node@22"
