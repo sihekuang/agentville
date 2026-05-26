@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
+import { useAgentStore } from "@/store/agents";
+import { usePip } from "@/hooks/usePip";
 import { Header } from "./ui/Header";
 import { SidePanel } from "./ui/SidePanel";
+import { PipPlaceholder } from "./ui/PipPlaceholder";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -20,6 +24,19 @@ const AgentVilleScene = dynamic(
 
 export function AppShell() {
   useAgentStream();
+  const pipActive = useAgentStore((s) => s.pipActive);
+  const { deactivate, toggle } = usePip();
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "p") {
+        e.preventDefault();
+        toggle();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggle]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -27,7 +44,11 @@ export function AppShell() {
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize="65%" minSize="30%">
           <main className="bg-background h-full overflow-hidden p-4">
-            <AgentVilleScene />
+            {pipActive ? (
+              <PipPlaceholder onRedock={deactivate} />
+            ) : (
+              <AgentVilleScene />
+            )}
           </main>
         </ResizablePanel>
         <ResizableHandle withHandle />

@@ -6,6 +6,7 @@ import { Application, extend, useApplication } from "@pixi/react";
 import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
 import { useAgentStore } from "@/store/agents";
+import { usePip } from "@/hooks/usePip";
 import { Tilemap } from "./Tilemap";
 import { AgentSprite } from "./AgentSprite";
 import { officeTheme } from "./themes/office";
@@ -233,6 +234,8 @@ export function AgentVilleScene() {
     vp.zoom(vp.worldScreenWidth * 0.2, true);
   }, []);
 
+  const { supported: pipSupported, activate: activatePip } = usePip();
+
   const containerDivRef = useRef<HTMLDivElement>(null);
   const [containerReady, setContainerReady] = useState(false);
 
@@ -266,6 +269,15 @@ export function AgentVilleScene() {
       </Application>
       )}
       <div className="absolute bottom-3 right-3 flex gap-1">
+        {pipSupported && (
+          <button
+            onClick={activatePip}
+            className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+            title="Picture in Picture"
+          >
+            ⧉
+          </button>
+        )}
         <button
           onClick={handleZoomIn}
           className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
