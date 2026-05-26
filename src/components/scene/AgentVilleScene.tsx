@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Container } from "pixi.js";
+import { Container, type Texture } from "pixi.js";
 import { Application, extend, useApplication } from "@pixi/react";
 import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
-import { useAgentStore } from "@/store/agents";
+import { useAgentStore, type TrackedAgent } from "@/store/agents";
 import { usePip } from "@/hooks/usePip";
 import { useLoadTexture } from "./use-animation-frames";
 import { Tilemap } from "./Tilemap";
@@ -57,9 +57,9 @@ const MAX_SCALE = 3;
 
 interface SceneContentProps {
   dynamicTheme: SceneTheme;
-  agentList: import("@/store/agents").TrackedAgent[];
+  agentList: TrackedAgent[];
   selectedAgentId: string | null;
-  spriteTexture: import("pixi.js").Texture | null;
+  spriteTexture: Texture | null;
   handleAgentClick: (id: string) => void;
   handleAgentDoubleClick: (id: string) => void;
   isDark: boolean;
