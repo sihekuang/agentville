@@ -80,8 +80,12 @@ export function usePip(): UsePipResult {
       pipDoc.body.appendChild(iframe);
 
       pipWin.addEventListener("pagehide", () => {
-        pipWindowRef.current = null;
-        setPipActive(false);
+        // Only deactivate if PIP is still active (user closed the PIP
+        // window directly, not via Re-dock which already handled this)
+        if (store.getState().pipActive) {
+          pipWindowRef.current = null;
+          setPipActive(false);
+        }
       });
 
       setPipActive(true);
@@ -95,9 +99,13 @@ export function usePip(): UsePipResult {
       const api = (window as any).electronAPI as ElectronAPI;
       api.pipDeactivate();
     } else if (backend === "browser") {
-      pipWindowRef.current?.close();
+      // Close PIP window AFTER the main canvas remounts — closing the
+      // iframe's WebGL context simultaneously with creating a new one
+      // causes the browser to reclaim the wrong context.
+      const win = pipWindowRef.current;
       pipWindowRef.current = null;
       setPipActive(false);
+      setTimeout(() => win?.close(), 300);
     }
   }, [backend, pipActive, setPipActive]);
 
