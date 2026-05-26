@@ -11,8 +11,9 @@ class Agentville < Formula
     system "npm", "install", "--ignore-scripts"
     system "npm", "run", "build"
 
-    # Install the standalone build
+    # Install the standalone build (Dir[] skips dotfiles, so copy .next explicitly)
     libexec.install Dir[".next/standalone/*"]
+    (libexec/".next").install Dir[".next/standalone/.next/*"]
 
     # Next.js standalone requires .next/static and public/ to be copied in
     (libexec/".next/static").install Dir[".next/static/*"]
