@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle } from "pixi.js";
+import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle, type Texture } from "pixi.js";
 import { extend, useTick } from "@pixi/react";
 import { useAnimationFrames } from "./use-animation-frames";
 import { AgentParticles } from "./AgentParticles";
@@ -18,6 +18,7 @@ interface AgentSpriteProps {
   currentAction: AgentAction;
   status: "busy" | "idle";
   animConfig: AgentAnimationConfig;
+  baseTexture: Texture | null;
   onClick: (sessionId: string) => void;
   onDoubleClick: (sessionId: string) => void;
   isSelected: boolean;
@@ -100,6 +101,7 @@ export function AgentSprite({
   currentAction,
   status,
   animConfig,
+  baseTexture,
   onClick,
   onDoubleClick,
   isSelected,
@@ -119,7 +121,7 @@ export function AgentSprite({
     onClick(sessionId);
   }, [onClick, onDoubleClick, sessionId]);
 
-  const { textures, speed } = useAnimationFrames(animConfig.src, animConfig, currentAction, status);
+  const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, status);
 
   const styles = useMemo(() => makeStyles(isDark), [isDark]);
 
@@ -157,12 +159,9 @@ export function AgentSprite({
 
   useEffect(() => {
     const sprite = spriteRef.current;
-    if (!sprite || !textures) return;
-    sprite.textures = textures;
-    sprite.animationSpeed = speed;
-    sprite.loop = true;
+    if (!sprite) return;
     sprite.play();
-  }, [textures, speed]);
+  }, [textures]);
 
   const tickCallback = useCallback(
     (ticker: { deltaTime: number }) => {

@@ -24,24 +24,37 @@ export function sliceFrames(
   return frames;
 }
 
+// Module-level texture cache — survives React strict mode unmount/remount
+// and provides instant synchronous reads on subsequent mounts.
+const textureCache = new Map<string, Texture>();
+
+export function useLoadTexture(src: string): Texture | null {
+  const [texture, setTexture] = useState<Texture | null>(
+    () => textureCache.get(src) ?? null,
+  );
+
+  useEffect(() => {
+    if (textureCache.has(src)) {
+      const cached = textureCache.get(src)!;
+      setTexture(cached);
+      return;
+    }
+    Assets.load<Texture>(src).then((t) => {
+      t.source.scaleMode = "nearest";
+      textureCache.set(src, t);
+      setTexture(t);
+    }).catch(() => {});
+  }, [src]);
+
+  return texture;
+}
+
 export function useAnimationFrames(
-  src: string,
+  baseTexture: Texture | null,
   animConfig: AgentAnimationConfig,
   currentAction: AgentAction,
   status: "busy" | "idle",
 ): { textures: Texture[] | null; speed: number } {
-  const [baseTexture, setBaseTexture] = useState<Texture | null>(null);
-
-  useEffect(() => {
-    // No cancelled/active guard needed: Assets.load() returns the same
-    // texture instance for the same URL, so duplicate calls from React
-    // strict mode double-mounts are harmless (same reference = no re-render).
-    Assets.load<Texture>(src).then((t) => {
-      t.source.scaleMode = "nearest";
-      setBaseTexture(t);
-    }).catch(() => {});
-  }, [src]);
-
   const action = status === "idle" ? "idle" : currentAction;
   const anim = animConfig.animations[action] ?? animConfig.animations.idle;
 

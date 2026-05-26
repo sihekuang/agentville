@@ -7,6 +7,7 @@ import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
 import { useAgentStore } from "@/store/agents";
 import { usePip } from "@/hooks/usePip";
+import { useLoadTexture } from "./use-animation-frames";
 import { Tilemap } from "./Tilemap";
 import { AgentSprite } from "./AgentSprite";
 import { officeTheme } from "./themes/office";
@@ -159,6 +160,7 @@ function SceneContent({
             currentAction={agent.currentAction}
             status={agent.status}
             animConfig={dynamicTheme.agent}
+            baseTexture={spriteTexture}
             onClick={handleAgentClick}
             onDoubleClick={handleAgentDoubleClick}
             isSelected={selectedAgentId === agent.sessionId}
@@ -179,6 +181,7 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const theme = THEMES[themeName];
+  const spriteTexture = useLoadTexture(theme.agent.src);
 
   const agentList = Object.values(agents);
   const viewportInstanceRef = useRef<Viewport>(null);
