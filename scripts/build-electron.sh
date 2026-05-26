@@ -33,6 +33,14 @@ APP_DIR=$(find dist -maxdepth 2 -name "AgentVille.app" -type d | head -1)
 if [ -n "$APP_DIR" ]; then
   cp -r .electron-standalone/node_modules "$APP_DIR/Contents/Resources/standalone/node_modules"
   echo "Injected node_modules into $APP_DIR"
+
+  # Re-sign after injection — the injected files break the seal from
+  # electron-builder's signing pass. CSC_NAME is set in CI env.
+  if [ -n "${CSC_NAME:-}" ]; then
+    echo "=== Re-signing after node_modules injection ==="
+    codesign --sign "$CSC_NAME" --force --deep --options runtime "$APP_DIR"
+    echo "Re-signed $APP_DIR"
+  fi
 fi
 
 echo "=== Cleanup ==="
