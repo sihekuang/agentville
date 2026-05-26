@@ -16,7 +16,7 @@ interface AgentSpriteProps {
   sessionId: string;
   cwd: string;
   currentAction: AgentAction;
-  status: "busy" | "idle";
+  status: string;
   animConfig: AgentAnimationConfig;
   baseTexture: Texture | null;
   onClick: (sessionId: string) => void;
@@ -121,13 +121,18 @@ export function AgentSprite({
     onClick(sessionId);
   }, [onClick, onDoubleClick, sessionId]);
 
-  const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, status);
+  // Normalize status: anything that isn't "idle" is treated as "busy"
+  // for rendering. The session file can report statuses like "shell"
+  // that aren't in the original type definition.
+  const renderStatus = status === "idle" ? "idle" : "busy";
+
+  const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, renderStatus);
 
   if (process.env.NODE_ENV === "development") {
     const id = sessionId.slice(0, 6);
     const hasTex = !!textures;
     const hasBase = !!baseTexture;
-    console.log(`[Sprite:render] ${id} status=${status} action=${currentAction} baseTex=${hasBase} textures=${hasTex} frames=${textures?.length ?? 0}`);
+    console.log(`[Sprite:render] ${id} status=${status}→${renderStatus} action=${currentAction} baseTex=${hasBase} textures=${hasTex} frames=${textures?.length ?? 0}`);
   }
 
   const styles = useMemo(() => makeStyles(isDark), [isDark]);
@@ -187,7 +192,7 @@ export function AgentSprite({
       const container = containerRef.current;
       if (!container) return;
 
-      if (status === "busy") {
+      if (renderStatus === "busy") {
         container.y = y + Math.sin(t * 3) * 1.5;
 
         const emote = emoteRef.current;
@@ -257,14 +262,14 @@ export function AgentSprite({
         shadow.alpha = 0.15 * shadowScale;
       }
     },
-    [y, status, animConfig.frameHeight, animConfig.frameWidth],
+    [y, renderStatus, animConfig.frameHeight, animConfig.frameWidth],
   );
 
   useTick(tickCallback);
 
   const label = sessionId.slice(0, 6);
   const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
-  const tint = status === "busy" ? 0xffffff : styles.idleTint;
+  const tint = renderStatus === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);
 
   return (
@@ -277,7 +282,7 @@ export function AgentSprite({
       onPointerDown={handleClick}
       hitArea={hitArea}
     >
-      {status === "busy" && (
+      {renderStatus === "busy" && (
         <pixiGraphics
           ref={shadowRef}
           draw={(g: Graphics) => {
@@ -287,7 +292,7 @@ export function AgentSprite({
           }}
         />
       )}
-      {status === "idle" && (
+      {renderStatus === "idle" && (
         <pixiGraphics
           ref={bedRef}
           draw={(g: Graphics) => {
@@ -313,7 +318,7 @@ export function AgentSprite({
           }}
         />
       )}
-      {textures && status === "busy" && (
+      {textures && renderStatus === "busy" && (
         <pixiAnimatedSprite
           ref={spriteRef}
           textures={textures}
@@ -323,7 +328,7 @@ export function AgentSprite({
           tint={tint}
         />
       )}
-      {status === "idle" && (
+      {renderStatus === "idle" && (
         <pixiGraphics
           ref={blanketRef}
           draw={(g: Graphics) => {
@@ -338,7 +343,7 @@ export function AgentSprite({
           }}
         />
       )}
-      {status === "idle" && (
+      {renderStatus === "idle" && (
         <pixiGraphics
           ref={headRef}
           draw={(g: Graphics) => {
@@ -381,7 +386,7 @@ export function AgentSprite({
       <AgentParticles
         themeName={themeName}
         currentAction={currentAction}
-        status={status}
+        status={renderStatus}
       />
       <pixiText
         text={dirName}
@@ -397,7 +402,7 @@ export function AgentSprite({
         scale={1 / TEXT_RES}
         y={animConfig.frameHeight / 2 + 14}
       />
-      {status === "busy" && emote && (
+      {renderStatus === "busy" && emote && (
         <pixiText
           ref={emoteRef}
           text={emote}
@@ -408,7 +413,7 @@ export function AgentSprite({
           alpha={1}
         />
       )}
-      {status === "idle" && (
+      {renderStatus === "idle" && (
         <>
           <pixiText
             ref={zzzRefs[0]}
