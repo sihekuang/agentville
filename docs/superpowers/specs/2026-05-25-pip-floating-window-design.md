@@ -200,6 +200,51 @@ function usePip() {
 | `src/hooks/usePip.ts` | Unified PIP hook — abstracts Electron vs browser |
 | `electron/pip.ts` | Electron PIP window creation/management |
 
+## Testing
+
+### Unit Tests (Vitest)
+
+**`usePip` hook:**
+- Returns `supported: false` when neither Electron nor Document PIP API is available
+- Returns `supported: true` with correct `backend` ('electron' | 'browser') based on environment
+- `activate()` sets `pipActive = true` in store
+- `deactivate()` sets `pipActive = false` in store
+- `activate()` when already active is a no-op (or focuses existing)
+
+**Store (`pipActive`):**
+- Defaults to `false`
+- `setPipActive(true)` → `pipActive` is `true`
+- `setPipActive(false)` → `pipActive` is `false`
+
+**`PipPlaceholder` component:**
+- Renders "Canvas is floating" message
+- Renders "Re-dock" button
+- "Re-dock" click calls `deactivate()`
+
+### E2E Tests (Playwright, browser mode)
+
+- PIP button is visible in scene controls
+- Clicking PIP button → canvas panel is replaced with placeholder
+- Placeholder shows "Re-dock" button
+- Clicking "Re-dock" → canvas panel is restored
+- PIP button is hidden when API is not supported (mock `documentPictureInPicture` as undefined)
+
+Note: actual PIP window opening cannot be tested in Playwright (requires real user gesture and the Document PIP API isn't available headless). The E2E tests verify the main window state transitions only.
+
+### Manual Testing Checklist
+
+- [ ] PIP button appears in scene controls (bottom-right)
+- [ ] Clicking PIP opens floating window at 400×300, bottom-right
+- [ ] Floating window shows canvas with agents animating
+- [ ] Can click agents, pan, and zoom in PIP window
+- [ ] Main window shows placeholder with "Re-dock" button
+- [ ] Cmd+Shift+P toggles PIP on/off
+- [ ] × button on PIP window closes it and restores canvas
+- [ ] "Re-dock" button closes PIP and restores canvas
+- [ ] Closing main window also closes PIP window
+- [ ] Theme change in main window syncs to PIP window
+- [ ] PIP window stays on top of other apps (Electron only)
+
 ## Out of Scope
 
 - Position/size memory between sessions
