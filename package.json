@@ -13,9 +13,9 @@
     "agentville": "./bin/agentville"
   },
   "scripts": {
-    "dev": "next dev --port 4200",
+    "dev": "next dev --port ${AGENTVILLE_PORT:-4200}",
     "build": "next build",
-    "start": "next start --port 4200",
+    "start": "next start --port ${AGENTVILLE_PORT:-4200}",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",

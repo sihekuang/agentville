@@ -13,10 +13,9 @@ class Agentville < Formula
 
     # Install the standalone build
     libexec.install Dir[".next/standalone/*"]
-    libexec.install ".next/static" => ".next/static"
 
-    # Copy public assets into the standalone dir
-    (libexec/".next/static").install Dir["public/*"] if Dir.exist?("public")
+    # Next.js standalone requires .next/static and public/ to be copied in
+    (libexec/".next/static").install Dir[".next/static/*"]
     libexec.install "public"
 
     # Create the launcher script
@@ -24,6 +23,7 @@ class Agentville < Formula
       #!/usr/bin/env bash
       set -euo pipefail
       AGENTVILLE_PORT="${AGENTVILLE_PORT:-4200}"
+      export PORT="$AGENTVILLE_PORT"
       echo "Starting AgentVille on http://localhost:${AGENTVILLE_PORT}"
       exec "#{Formula["node@22"].opt_bin}/node" "#{libexec}/server.js"
     BASH

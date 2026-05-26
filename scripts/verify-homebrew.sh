@@ -83,6 +83,13 @@ fi
 echo "[8/8] Smoke testing app startup..."
 TEST_PORT=4200
 if [ -f "$PROJECT_DIR/.next/standalone/server.js" ]; then
+  # Copy static assets into standalone (required by Next.js)
+  if [ -d "$PROJECT_DIR/.next/static" ] && [ ! -d "$PROJECT_DIR/.next/standalone/.next/static" ]; then
+    cp -R "$PROJECT_DIR/.next/static" "$PROJECT_DIR/.next/standalone/.next/static"
+  fi
+  if [ -d "$PROJECT_DIR/public" ] && [ ! -d "$PROJECT_DIR/.next/standalone/public" ]; then
+    cp -R "$PROJECT_DIR/public" "$PROJECT_DIR/.next/standalone/public"
+  fi
   PORT=$TEST_PORT node "$PROJECT_DIR/.next/standalone/server.js" &
   SERVER_PID=$!
 
