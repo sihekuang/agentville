@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useAgentStore } from "@/store/agents";
-
-type PipBackend = "electron" | "browser";
-
-interface ElectronAPI {
-  pipActivate: () => void;
-  pipDeactivate: () => void;
-  onPipActivated: (callback: () => void) => () => void;
-  onPipDeactivated: (callback: () => void) => () => void;
-}
+import {
+  PIP_CONFIG,
+  getElectronAPI,
+  type PipBackend,
+  type ElectronPipAPI,
+} from "@/lib/pip-types";
 
 export interface UsePipResult {
   supported: boolean;
@@ -23,12 +20,8 @@ export interface UsePipResult {
 
 function getBackend(): PipBackend | null {
   if (typeof window === "undefined") return null;
-  if ("electronAPI" in window && (window as any).electronAPI?.pipActivate) {
-    return "electron";
-  }
-  if ("documentPictureInPicture" in window) {
-    return "browser";
-  }
+  if (getElectronAPI()) return "electron";
+  if ("documentPictureInPicture" in window) return "browser";
   return null;
 }
 
@@ -41,7 +34,7 @@ export function usePip(): UsePipResult {
 
   useEffect(() => {
     if (backend !== "electron") return;
-    const api = (window as any).electronAPI as ElectronAPI;
+    const api = getElectronAPI() as ElectronPipAPI;
     const offActivated = api.onPipActivated(() => setPipActive(true));
     const offDeactivated = api.onPipDeactivated(() => setPipActive(false));
     return () => {
@@ -54,41 +47,40 @@ export function usePip(): UsePipResult {
     if (store.getState().pipActive) return;
 
     if (backend === "electron") {
-      const api = (window as any).electronAPI as ElectronAPI;
-      api.pipActivate();
+      getElectronAPI()?.pipActivate();
     } else if (backend === "browser") {
-      const pipWin = await (window as any).documentPictureInPicture.requestWindow({
-        width: 400,
-        height: 300,
-      });
-      pipWindowRef.current = pipWin;
+      try {
+        const pipWin = await (window as any).documentPictureInPicture.requestWindow({
+          width: PIP_CONFIG.WIDTH,
+          height: PIP_CONFIG.HEIGHT,
+        });
+        pipWindowRef.current = pipWin;
 
-      // Embed the /pip route as an iframe — it's a full Next.js page
-      // with theme provider, PixiJS, and agent streaming built in.
-      const pipDoc = pipWin.document;
-      pipDoc.documentElement.style.height = "100%";
-      pipDoc.body.style.margin = "0";
-      pipDoc.body.style.overflow = "hidden";
-      pipDoc.body.style.height = "100%";
+        const pipDoc = pipWin.document;
+        pipDoc.documentElement.style.height = "100%";
+        pipDoc.body.style.margin = "0";
+        pipDoc.body.style.overflow = "hidden";
+        pipDoc.body.style.height = "100%";
 
-      const iframe = pipDoc.createElement("iframe");
-      iframe.src = "/pip";
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.border = "none";
-      iframe.style.display = "block";
-      pipDoc.body.appendChild(iframe);
+        const iframe = pipDoc.createElement("iframe");
+        iframe.src = PIP_CONFIG.PIP_ROUTE;
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "none";
+        iframe.style.display = "block";
+        pipDoc.body.appendChild(iframe);
 
-      pipWin.addEventListener("pagehide", () => {
-        // Only deactivate if PIP is still active (user closed the PIP
-        // window directly, not via Re-dock which already handled this)
-        if (store.getState().pipActive) {
-          pipWindowRef.current = null;
-          setPipActive(false);
-        }
-      });
+        pipWin.addEventListener("pagehide", () => {
+          if (store.getState().pipActive) {
+            pipWindowRef.current = null;
+            setPipActive(false);
+          }
+        });
 
-      setPipActive(true);
+        setPipActive(true);
+      } catch (err) {
+        console.error("[PIP] Failed to open browser PIP window:", err);
+      }
     }
   }, [backend, pipActive, setPipActive]);
 
@@ -96,16 +88,12 @@ export function usePip(): UsePipResult {
     if (!store.getState().pipActive) return;
 
     if (backend === "electron") {
-      const api = (window as any).electronAPI as ElectronAPI;
-      api.pipDeactivate();
+      getElectronAPI()?.pipDeactivate();
     } else if (backend === "browser") {
-      // Close PIP window AFTER the main canvas remounts — closing the
-      // iframe's WebGL context simultaneously with creating a new one
-      // causes the browser to reclaim the wrong context.
       const win = pipWindowRef.current;
       pipWindowRef.current = null;
       setPipActive(false);
-      setTimeout(() => win?.close(), 300);
+      setTimeout(() => win?.close(), PIP_CONFIG.REDOCK_DELAY_MS);
     }
   }, [backend, pipActive, setPipActive]);
 

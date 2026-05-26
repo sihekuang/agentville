@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
+import { isElectron as checkElectron, getElectronAPI } from "@/lib/pip-types";
 
 const AgentVilleScene = dynamic(
   () =>
@@ -15,29 +16,26 @@ const AgentVilleScene = dynamic(
 export default function PipPage() {
   useAgentStream();
 
-  // Defer Electron detection to after hydration to avoid mismatch
   const [isElectron, setIsElectron] = useState(false);
   useEffect(() => {
-    if ("electronAPI" in window) setIsElectron(true);
+    if (checkElectron()) setIsElectron(true);
   }, []);
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-background relative">
       {isElectron && (
         <>
-          {/* Drag handle */}
           <div
             className="absolute top-0 left-0 right-0 h-5 z-10"
             style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
           />
-          {/* PIP window controls */}
           <div
             className="absolute top-1 right-1 z-20 flex gap-1"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-              onClick={() => (window as any).electronAPI?.pipFocusMain()}
+              onClick={() => getElectronAPI()?.pipFocusMain()}
               title="Show main window"
             >
               ↩

@@ -234,8 +234,6 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
     vp.zoom(vp.worldScreenWidth * 0.2, true);
   }, []);
 
-  const { supported: pipSupported, activate: activatePip } = usePip();
-
   const containerDivRef = useRef<HTMLDivElement>(null);
   const [containerReady, setContainerReady] = useState(false);
 
@@ -269,15 +267,7 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
       </Application>
       )}
       <div className="absolute bottom-3 right-3 flex gap-1">
-        {pipSupported && !isPip && (
-          <button
-            onClick={activatePip}
-            className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-            title="Picture in Picture"
-          >
-            ⧉
-          </button>
-        )}
+        {!isPip && <PipButton />}
         <button
           onClick={handleZoomIn}
           className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
@@ -301,5 +291,19 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function PipButton() {
+  const { supported, activate } = usePip();
+  if (!supported) return null;
+  return (
+    <button
+      onClick={activate}
+      className="w-7 h-7 flex items-center justify-center text-sm rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+      title="Picture in Picture"
+    >
+      ⧉
+    </button>
   );
 }

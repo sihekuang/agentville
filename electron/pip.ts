@@ -1,10 +1,26 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import path from "path";
 
+// IPC channel names — keep in sync with src/lib/pip-types.ts IPC constants.
+const IPC = {
+  PIP_ACTIVATE: "pip:activate",
+  PIP_DEACTIVATE: "pip:deactivate",
+  PIP_FOCUS_MAIN: "pip:focus-main",
+  PIP_ACTIVATED: "pip:activated",
+  PIP_DEACTIVATED: "pip:deactivated",
+} as const;
+
+const PIP_WIDTH = 400;
+const PIP_HEIGHT = 300;
+const PIP_MIN_WIDTH = 200;
+const PIP_MIN_HEIGHT = 150;
+const PIP_OFFSET = 20;
+const PIP_ROUTE = "/pip";
+
 let pipWindow: BrowserWindow | null = null;
 
 export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
-  ipcMain.on("pip:activate", () => {
+  ipcMain.on(IPC.PIP_ACTIVATE, () => {
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.focus();
       return;
@@ -14,12 +30,12 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
     const { width: screenW, height: screenH } = display.workAreaSize;
 
     pipWindow = new BrowserWindow({
-      width: 400,
-      height: 300,
-      minWidth: 200,
-      minHeight: 150,
-      x: screenW - 400 - 20,
-      y: screenH - 300 - 20,
+      width: PIP_WIDTH,
+      height: PIP_HEIGHT,
+      minWidth: PIP_MIN_WIDTH,
+      minHeight: PIP_MIN_HEIGHT,
+      x: screenW - PIP_WIDTH - PIP_OFFSET,
+      y: screenH - PIP_HEIGHT - PIP_OFFSET,
       frame: false,
       alwaysOnTop: true,
       skipTaskbar: true,
@@ -36,28 +52,28 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
     pipWindow.setAlwaysOnTop(true, "floating");
 
     const port = getPort();
-    pipWindow.loadURL(`http://127.0.0.1:${port}/pip`);
+    pipWindow.loadURL(`http://127.0.0.1:${port}${PIP_ROUTE}`);
 
     pipWindow.once("ready-to-show", () => {
-      mainWindow.webContents.send("pip:activated");
+      mainWindow.webContents.send(IPC.PIP_ACTIVATED);
     });
 
     pipWindow.on("closed", () => {
       pipWindow = null;
       if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("pip:deactivated");
+        mainWindow.webContents.send(IPC.PIP_DEACTIVATED);
       }
     });
   });
 
-  ipcMain.on("pip:focus-main", () => {
+  ipcMain.on(IPC.PIP_FOCUS_MAIN, () => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
     }
   });
 
-  ipcMain.on("pip:deactivate", () => {
+  ipcMain.on(IPC.PIP_DEACTIVATE, () => {
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.close();
     }
