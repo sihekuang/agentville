@@ -25,7 +25,6 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
       skipTaskbar: true,
       resizable: true,
       roundedCorners: true,
-      parent: mainWindow,
       webPreferences: {
         preload: path.join(__dirname, "preload.js"),
         contextIsolation: true,
@@ -34,6 +33,7 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
     });
 
     pipWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    pipWindow.setAlwaysOnTop(true, "floating");
 
     const port = getPort();
     pipWindow.loadURL(`http://127.0.0.1:${port}/pip`);
@@ -48,6 +48,13 @@ export function setupPip(mainWindow: BrowserWindow, getPort: () => number) {
         mainWindow.webContents.send("pip:deactivated");
       }
     });
+  });
+
+  ipcMain.on("pip:focus-main", () => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
 
   ipcMain.on("pip:deactivate", () => {
