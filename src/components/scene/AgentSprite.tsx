@@ -123,6 +123,13 @@ export function AgentSprite({
 
   const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, status);
 
+  if (process.env.NODE_ENV === "development") {
+    const id = sessionId.slice(0, 6);
+    const hasTex = !!textures;
+    const hasBase = !!baseTexture;
+    console.log(`[Sprite:render] ${id} status=${status} action=${currentAction} baseTex=${hasBase} textures=${hasTex} frames=${textures?.length ?? 0}`);
+  }
+
   const styles = useMemo(() => makeStyles(isDark), [isDark]);
 
   const hitArea = useMemo(
@@ -159,9 +166,17 @@ export function AgentSprite({
 
   useEffect(() => {
     const sprite = spriteRef.current;
-    if (!sprite) return;
+    if (!sprite) {
+      if (process.env.NODE_ENV === "development" && textures) {
+        console.warn(`[Sprite:play] ${sessionId.slice(0, 6)} spriteRef is null but textures exist (${textures.length} frames)`);
+      }
+      return;
+    }
     sprite.play();
-  }, [textures]);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[Sprite:play] ${sessionId.slice(0, 6)} playing ${textures?.length ?? 0} frames`);
+    }
+  }, [textures, sessionId]);
 
   const tickCallback = useCallback(
     (ticker: { deltaTime: number }) => {
