@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { createElement } from "react";
 import { useAgentStore } from "@/store/agents";
 
 type PipBackend = "electron" | "browser";
@@ -39,7 +37,6 @@ export function usePip(): UsePipResult {
   const setPipActive = useAgentStore((s) => s.setPipActive);
   const store = useAgentStore;
   const pipWindowRef = useRef<Window | null>(null);
-  const pipRootRef = useRef<Root | null>(null);
   const backend = getBackend();
 
   useEffect(() => {
@@ -66,50 +63,19 @@ export function usePip(): UsePipResult {
       });
       pipWindowRef.current = pipWin;
 
-      // Copy stylesheets into PIP window
-      for (const sheet of document.styleSheets) {
-        try {
-          if (sheet.href) {
-            const link = pipWin.document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = sheet.href;
-            pipWin.document.head.appendChild(link);
-          } else if (sheet.cssRules) {
-            const style = pipWin.document.createElement("style");
-            for (const rule of sheet.cssRules) {
-              style.textContent += rule.cssText;
-            }
-            pipWin.document.head.appendChild(style);
-          }
-        } catch {
-          // CORS stylesheet — skip
-        }
-      }
-
-      // Sync dark mode
-      if (document.documentElement.classList.contains("dark")) {
-        pipWin.document.documentElement.classList.add("dark");
-      }
-
-      // Set up body styles
+      // Embed the /pip route as an iframe — it's a full Next.js page
+      // with theme provider, PixiJS, and agent streaming built in.
       pipWin.document.body.style.margin = "0";
       pipWin.document.body.style.overflow = "hidden";
-      pipWin.document.body.className = "bg-background";
 
-      // Create mount point and render React tree
-      const container = pipWin.document.createElement("div");
-      container.style.width = "100vw";
-      container.style.height = "100vh";
-      pipWin.document.body.appendChild(container);
-
-      const { BrowserPipContent } = await import("@/components/scene/BrowserPipContent");
-      const root = createRoot(container);
-      pipRootRef.current = root;
-      root.render(createElement(BrowserPipContent));
+      const iframe = pipWin.document.createElement("iframe");
+      iframe.src = "/pip";
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      pipWin.document.body.appendChild(iframe);
 
       pipWin.addEventListener("pagehide", () => {
-        pipRootRef.current?.unmount();
-        pipRootRef.current = null;
         pipWindowRef.current = null;
         setPipActive(false);
       });
@@ -125,8 +91,6 @@ export function usePip(): UsePipResult {
       const api = (window as any).electronAPI as ElectronAPI;
       api.pipDeactivate();
     } else if (backend === "browser") {
-      pipRootRef.current?.unmount();
-      pipRootRef.current = null;
       pipWindowRef.current?.close();
       pipWindowRef.current = null;
       setPipActive(false);
