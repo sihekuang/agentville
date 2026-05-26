@@ -9,7 +9,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     passWithNoTests: true,
-    exclude: ["e2e/**", "node_modules/**", ".claude/**"],
+    clearMocks: true,
+    exclude: ["e2e/**", "node_modules/**", ".claude/**", "dist/**", ".next/**"],
   },
   resolve: {
     alias: {
