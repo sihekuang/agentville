@@ -33,16 +33,31 @@ export function useAnimationFrames(
   const [baseTexture, setBaseTexture] = useState<Texture | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    Assets.load<Texture>(src).then((t) => {
-      if (!cancelled) {
-        t.source.scaleMode = "nearest";
-        setBaseTexture(t);
+    let active = true;
+
+    async function load() {
+      try {
+        const t = await Assets.load<Texture>(src);
+        if (active) {
+          t.source.scaleMode = "nearest";
+          setBaseTexture(t);
+        }
+      } catch {
+        // Asset failed to load — sprite won't render
       }
-    }).catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    }
+
+    // Check cache first — resolves the React strict mode double-mount
+    // issue where the cancelled flag from mount 1 races with mount 2.
+    const cached = Assets.cache.has(src) ? Assets.get<Texture>(src) : null;
+    if (cached) {
+      cached.source.scaleMode = "nearest";
+      setBaseTexture(cached);
+    } else {
+      load();
+    }
+
+    return () => { active = false; };
   }, [src]);
 
   const action = status === "idle" ? "idle" : currentAction;
