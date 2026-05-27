@@ -42,6 +42,9 @@ function toLegacyAction(
     case "writing":
       currentAction = "writing";
       break;
+    case "waiting":
+      currentAction = "waiting";
+      break;
     case "idle":
     default:
       currentAction = "idle";

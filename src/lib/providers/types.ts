@@ -9,6 +9,7 @@ export type NormalizedAction =
   | "writing"
   | "delegating"
   | "other"
+  | "waiting"
   | "idle";
 
 /** A single activity entry from an agent's transcript/log */

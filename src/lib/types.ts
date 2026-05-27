@@ -30,6 +30,7 @@ export type AgentAction =
   | "tool:Agent"
   | "tool:other"
   | "writing"
+  | "waiting"
   | "idle";
 
 export interface HostApp {

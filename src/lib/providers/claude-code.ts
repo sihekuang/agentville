@@ -10,6 +10,14 @@ import { resolveHostApp } from "../host-app";
 
 const MAX_RECENT_ACTIONS = 20;
 
+function hasIdlePromptSignal(sessionId: string): boolean {
+  try {
+    return fs.existsSync(`/tmp/agentville/idle-prompt-${sessionId}`);
+  } catch {
+    return false;
+  }
+}
+
 /** Map Claude Code's AgentAction to provider-agnostic NormalizedAction */
 export function normalizeAction(action: AgentAction): NormalizedAction {
   switch (action) {
@@ -28,6 +36,8 @@ export function normalizeAction(action: AgentAction): NormalizedAction {
       return "thinking";
     case "writing":
       return "writing";
+    case "waiting":
+      return "waiting";
     case "idle":
       return "idle";
   }
@@ -127,8 +137,11 @@ export class ClaudeCodeProvider implements AgentProvider {
       }
     }
 
-    const claudeAction =
-      session.status === "idle"
+    const isWaiting =
+      session.status === "idle" && hasIdlePromptSignal(session.sessionId);
+    const claudeAction: AgentAction = isWaiting
+      ? "waiting"
+      : session.status === "idle"
         ? "idle"
         : currentActionFromTranscript(recentTranscript);
 
@@ -143,7 +156,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       provider: this.name,
       pid: session.pid,
       cwd: session.cwd,
-      status: session.status,
+      status: isWaiting ? "busy" : session.status,
       startedAt: session.startedAt,
       currentAction: normalizeAction(claudeAction),
       recentActivity: recentTranscript.map(toActivityEntry),
