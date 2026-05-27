@@ -70,7 +70,7 @@ function toAgentState(agent: DiscoveredAgent): AgentState {
     sessionId: agent.id,
     pid: agent.pid,
     cwd: agent.cwd,
-    status: agent.status,
+    status: agent.status === "waiting" ? "busy" : agent.status,
     currentAction,
     lastToolName,
     subagents: agent.subagents.map(toAgentState),

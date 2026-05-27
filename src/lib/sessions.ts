@@ -6,7 +6,7 @@ export interface DiscoveredSession {
   pid: number;
   sessionId: string;
   cwd: string;
-  status: "busy" | "idle";
+  status: "busy" | "idle" | "waiting";
   startedAt: number;
   updatedAt: number;
   entrypoint: string;

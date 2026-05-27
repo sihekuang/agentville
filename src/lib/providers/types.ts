@@ -29,7 +29,7 @@ export interface DiscoveredAgent {
   provider: string;
   pid: number;
   cwd: string;
-  status: "busy" | "idle";
+  status: "busy" | "idle" | "waiting";
   startedAt: number;
   currentAction: NormalizedAction;
   recentActivity: ActivityEntry[];
