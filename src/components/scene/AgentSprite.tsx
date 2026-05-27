@@ -491,6 +491,8 @@ function formatAction(action: AgentAction): string {
       return "\u{1F527}";
     case "writing":
       return "\u{1F4AC}";
+    case "waiting":
+      return "❓";
     case "idle":
       return "";
   }

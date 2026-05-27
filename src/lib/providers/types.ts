@@ -9,6 +9,7 @@ export type NormalizedAction =
   | "writing"
   | "delegating"
   | "other"
+  | "waiting"
   | "idle";
 
 /** A single activity entry from an agent's transcript/log */
@@ -28,7 +29,7 @@ export interface DiscoveredAgent {
   provider: string;
   pid: number;
   cwd: string;
-  status: "busy" | "idle";
+  status: "busy" | "idle" | "waiting";
   startedAt: number;
   currentAction: NormalizedAction;
   recentActivity: ActivityEntry[];

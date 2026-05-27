@@ -30,6 +30,7 @@ export type AgentAction =
   | "tool:Agent"
   | "tool:other"
   | "writing"
+  | "waiting"
   | "idle";
 
 export interface HostApp {
@@ -60,8 +61,9 @@ export interface RawSessionFile {
   peerProtocol: number;
   kind: string;
   entrypoint: string;
-  status: "busy" | "idle";
+  status: "busy" | "idle" | "waiting";
   updatedAt: number;
+  waitingFor?: string;
 }
 
 export interface RawIdeLock {

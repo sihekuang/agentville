@@ -29,6 +29,7 @@ export const workshopTheme: SceneTheme = {
       "tool:Agent":  { row: 5, frames: 4, speed: 0.05 },
       "tool:other":  { row: 2, frames: 2, speed: 0.03 },
       writing:       { row: 3, frames: 4, speed: 0.1 },
+      waiting:       { row: 0, frames: 2, speed: 0.02 },
     },
   },
   agentSlots: [

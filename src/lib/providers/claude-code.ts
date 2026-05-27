@@ -28,6 +28,8 @@ export function normalizeAction(action: AgentAction): NormalizedAction {
       return "thinking";
     case "writing":
       return "writing";
+    case "waiting":
+      return "waiting";
     case "idle":
       return "idle";
   }
@@ -127,10 +129,12 @@ export class ClaudeCodeProvider implements AgentProvider {
       }
     }
 
-    const claudeAction =
-      session.status === "idle"
-        ? "idle"
-        : currentActionFromTranscript(recentTranscript);
+    const claudeAction: AgentAction =
+      session.status === "waiting"
+        ? "waiting"
+        : session.status === "idle"
+          ? "idle"
+          : currentActionFromTranscript(recentTranscript);
 
     const hostApp = resolveHostApp(
       session.pid,
@@ -143,7 +147,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       provider: this.name,
       pid: session.pid,
       cwd: session.cwd,
-      status: session.status,
+      status: session.status === "waiting" ? "busy" : session.status,
       startedAt: session.startedAt,
       currentAction: normalizeAction(claudeAction),
       recentActivity: recentTranscript.map(toActivityEntry),
