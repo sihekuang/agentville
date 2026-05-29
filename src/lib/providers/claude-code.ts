@@ -4,37 +4,12 @@ import path from "path";
 import type { AgentProvider } from "./provider";
 import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
-import type { AgentAction, TranscriptEntry } from "../types";
+import type { TranscriptEntry } from "../types";
 import { discoverSessions, getTranscriptPath } from "../sessions";
 import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
 import { resolveHostApp } from "../host-app";
 
 const MAX_RECENT_ACTIONS = 20;
-
-/** Map Claude Code's AgentAction to provider-agnostic NormalizedAction */
-export function normalizeAction(action: AgentAction): NormalizedAction {
-  switch (action) {
-    case "tool:Read":
-      return "reading";
-    case "tool:Edit":
-    case "tool:Write":
-      return "editing";
-    case "tool:Bash":
-      return "executing";
-    case "tool:Agent":
-      return "delegating";
-    case "tool:other":
-      return "other";
-    case "thinking":
-      return "thinking";
-    case "writing":
-      return "writing";
-    case "waiting":
-      return "waiting";
-    case "idle":
-      return "idle";
-  }
-}
 
 /** Map a Claude TranscriptEntry to a provider-agnostic ActivityEntry */
 export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
@@ -130,7 +105,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       }
     }
 
-    const claudeAction: AgentAction =
+    const currentAction: NormalizedAction =
       session.status === "waiting"
         ? "waiting"
         : session.status === "idle"
@@ -150,7 +125,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       cwd: session.cwd,
       status: session.status === "waiting" ? "busy" : session.status,
       startedAt: session.startedAt,
-      currentAction: normalizeAction(claudeAction),
+      currentAction,
       recentActivity: recentTranscript.map(toActivityEntry),
       hostApp,
       subagents: [],

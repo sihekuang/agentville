@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseTranscriptLine, parseTranscriptFile } from "@/lib/transcript";
+import { parseTranscriptLine, parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcript";
+import type { NormalizedAction } from "@/lib/providers/types";
 import path from "path";
 
 const FIXTURES = path.resolve(__dirname, "../../fixtures");
@@ -97,5 +98,77 @@ describe("parseTranscriptFile", () => {
     const thinking = entries.find((e) => e.type === "thinking");
     expect(thinking).toBeDefined();
     expect(thinking!.summary).toBe("Thinking...");
+  });
+});
+
+describe("currentActionFromTranscript", () => {
+  it("returns 'idle' for empty entries", () => {
+    const action: NormalizedAction = currentActionFromTranscript([]);
+    expect(action).toBe("idle");
+  });
+
+  it("returns 'thinking' for last thinking entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "thinking", summary: "Thinking..." },
+    ]);
+    expect(action).toBe("thinking");
+  });
+
+  it("returns 'writing' for last text entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "text", summary: "Here is the plan." },
+    ]);
+    expect(action).toBe("writing");
+  });
+
+  it("returns 'reading' for last Read tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Read /src/app.ts" },
+    ]);
+    expect(action).toBe("reading");
+  });
+
+  it("returns 'editing' for last Edit tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Edit /src/app.ts" },
+    ]);
+    expect(action).toBe("editing");
+  });
+
+  it("returns 'editing' for last Write tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Write /src/app.ts" },
+    ]);
+    expect(action).toBe("editing");
+  });
+
+  it("returns 'executing' for last Bash tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Bash: npm test" },
+    ]);
+    expect(action).toBe("executing");
+  });
+
+  it("returns 'delegating' for last Agent tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Agent: run sub-task" },
+    ]);
+    expect(action).toBe("delegating");
+  });
+
+  it("returns 'other' for unrecognized tool_use entry", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "WebSearch something" },
+    ]);
+    expect(action).toBe("other");
+  });
+
+  it("uses the last entry when multiple entries are present", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "tool_use", summary: "Read /src/app.ts" },
+      { timestamp: 2, type: "thinking", summary: "Thinking..." },
+      { timestamp: 3, type: "tool_use", summary: "Bash: npm test" },
+    ]);
+    expect(action).toBe("executing");
   });
 });

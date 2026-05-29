@@ -1,5 +1,6 @@
 import fs from "fs";
-import type { TranscriptEntry, AgentAction } from "./types";
+import type { TranscriptEntry } from "./types";
+import type { NormalizedAction } from "./providers/types";
 
 interface RawTranscriptLine {
   type: string;
@@ -88,7 +89,7 @@ function formatToolSummary(
 
 export function currentActionFromTranscript(
   entries: TranscriptEntry[]
-): AgentAction {
+): NormalizedAction {
   if (entries.length === 0) return "idle";
 
   const last = entries[entries.length - 1];
@@ -98,10 +99,14 @@ export function currentActionFromTranscript(
 
   if (last.type === "tool_use") {
     const toolName = last.summary.split(" ")[0].split(":")[0];
-    if (["Read", "Edit", "Write", "Bash", "Agent"].includes(toolName)) {
-      return `tool:${toolName}` as AgentAction;
+    switch (toolName) {
+      case "Read": return "reading";
+      case "Edit":
+      case "Write": return "editing";
+      case "Bash": return "executing";
+      case "Agent": return "delegating";
+      default: return "other";
     }
-    return "tool:other";
   }
 
   return "idle";
