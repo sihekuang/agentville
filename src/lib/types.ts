@@ -1,55 +1,5 @@
-/**
- * Claude Code-specific agent state.
- * Legacy type kept for backwards compatibility with existing UI components.
- * New code should use DiscoveredAgent from "@/lib/providers".
- */
-export interface AgentState {
-  sessionId: string;
-  pid: number;
-  cwd: string;
-  status: "busy" | "idle";
-  currentAction: AgentAction;
-  lastToolName: string | null;
-  subagents: AgentState[];
-  hostApp: HostApp | null;
-  startedAt: number;
-  recentActions: TranscriptEntry[];
-}
-
-/**
- * Claude Code-specific action type.
- * Legacy type kept for backwards compatibility with existing UI components.
- * New code should use NormalizedAction from "@/lib/providers".
- */
-export type AgentAction =
-  | "thinking"
-  | "tool:Read"
-  | "tool:Edit"
-  | "tool:Bash"
-  | "tool:Write"
-  | "tool:Agent"
-  | "tool:other"
-  | "writing"
-  | "waiting"
-  | "idle";
-
-export interface HostApp {
-  type: "terminal" | "ide";
-  name: string;
-  pid: number;
-  cwd: string;
-}
-
-export interface TranscriptEntry {
-  timestamp: number;
-  type: "tool_use" | "thinking" | "text" | "subagent_start" | "subagent_stop";
-  summary: string;
-}
-
-export interface StreamEvent {
-  event: "agent-added" | "agent-removed" | "agent-updated";
-  agent: AgentState;
-}
+import type { HostApp } from "./providers/types";
+export type { HostApp };
 
 export interface RawSessionFile {
   pid: number;

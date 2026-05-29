@@ -1,4 +1,10 @@
-import type { HostApp } from "../types";
+/** Host application that launched the agent session */
+export interface HostApp {
+  type: "terminal" | "ide";
+  name: string;
+  pid: number;
+  cwd: string;
+}
 
 /** Provider-agnostic agent action categories */
 export type NormalizedAction =
@@ -38,8 +44,6 @@ export interface Agent {
   /** Provider-specific extras (e.g., version, entrypoint for Claude Code) */
   metadata?: Record<string, unknown>;
 }
-
-export type { HostApp } from "../types";
 
 /**
  * Build a uniform Agent id: `<provider>:<sessionId>`.

@@ -4,7 +4,7 @@ import path from "path";
 import type { AgentProvider } from "./provider";
 import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
-import type { TranscriptEntry } from "../types";
+import type { TranscriptEntry } from "../transcript";
 import { discoverSessions, getTranscriptPath } from "../sessions";
 import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
 import { resolveHostApp } from "../host-app";

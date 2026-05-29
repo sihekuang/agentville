@@ -1,6 +1,11 @@
 import fs from "fs";
-import type { TranscriptEntry } from "./types";
 import type { NormalizedAction } from "./providers/types";
+
+export interface TranscriptEntry {
+  timestamp: number;
+  type: "tool_use" | "thinking" | "text" | "subagent_start" | "subagent_stop";
+  summary: string;
+}
 
 interface RawTranscriptLine {
   type: string;
