@@ -475,14 +475,14 @@ export function AgentSprite({
 
 function formatAction(action: NormalizedAction): string {
   switch (action) {
-    case "reading":    return "Reading";
-    case "editing":    return "Editing";
-    case "executing":  return "Executing";
-    case "delegating": return "Delegating";
-    case "thinking":   return "Thinking";
-    case "writing":    return "Writing";
-    case "waiting":    return "Waiting";
-    case "other":      return "Working";
-    case "idle":       return "Idle";
+    case "thinking":   return "\u{1F4AD}";  // 💭
+    case "reading":    return "\u{1F4D6}";  // 📖
+    case "editing":    return "✏️";
+    case "executing":  return "⚡";
+    case "delegating": return "\u{1F916}";  // 🤖
+    case "other":      return "\u{1F527}";  // 🔧
+    case "writing":    return "\u{1F4AC}";  // 💬
+    case "waiting":    return "❓";
+    case "idle":       return "";
   }
 }
