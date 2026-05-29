@@ -22,6 +22,10 @@ class ProviderRegistry {
     return results;
   }
 
+  getByName(name: string): AgentProvider | null {
+    return this.providers.find((p) => p.name === name) ?? null;
+  }
+
   getProviders(): readonly AgentProvider[] {
     return this.providers;
   }
