@@ -5,7 +5,7 @@ import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle, type T
 import { extend, useTick } from "@pixi/react";
 import { useAnimationFrames } from "./use-animation-frames";
 import { AgentParticles } from "./AgentParticles";
-import type { NormalizedAction } from "@/lib/providers/types";
+import { parseAgentId, type NormalizedAction } from "@/lib/providers/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
 extend({ AnimatedSprite, Container, Text, Graphics });
@@ -267,7 +267,7 @@ export function AgentSprite({
 
   useTick(tickCallback);
 
-  const label = id.slice(0, 6);
+  const label = (parseAgentId(id)?.provider ?? id).slice(0, 6);
   const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
   const tint = renderStatus === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);
