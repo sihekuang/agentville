@@ -63,8 +63,7 @@ export function makeAgentId(provider: string, sessionId: string): string {
 export function parseAgentId(id: string): { provider: string; sessionId: string } | null {
   const i = id.indexOf(":");
   if (i <= 0) return null;
-  const provider = id.slice(0, i);
   const sessionId = id.slice(i + 1);
-  if (!provider || !sessionId) return null;
-  return { provider, sessionId };
+  if (!sessionId) return null;
+  return { provider: id.slice(0, i), sessionId };
 }
