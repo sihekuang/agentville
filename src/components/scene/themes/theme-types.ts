@@ -1,4 +1,4 @@
-import type { AgentAction } from "@/lib/types";
+import type { NormalizedAction } from "@/lib/providers/types";
 
 export interface TileConfig {
   src: string;
@@ -17,7 +17,7 @@ export interface AgentAnimationConfig {
   src: string;
   frameWidth: number;
   frameHeight: number;
-  animations: Record<AgentAction, { row: number; frames: number; speed: number }>;
+  animations: Record<NormalizedAction, { row: number; frames: number; speed: number }>;
 }
 
 export interface AgentSlot {
@@ -49,4 +49,4 @@ export interface ParticleActionConfig {
   lifetime: { min: number; max: number };
 }
 
-export type ParticleMap = Partial<Record<AgentAction, ParticleActionConfig>>;
+export type ParticleMap = Partial<Record<NormalizedAction, ParticleActionConfig>>;

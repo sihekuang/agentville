@@ -94,7 +94,10 @@ interface AgentParticlesProps {
 export function AgentParticles({ themeName, currentAction, status }: AgentParticlesProps) {
   const particleMap = themeParticles[themeName];
   const action: AgentAction = status === "idle" ? "idle" : currentAction;
-  const config: ParticleActionConfig | undefined = particleMap?.[action];
+  // TEMP CAST: particleMap is now Partial<Record<NormalizedAction>>, but action is still
+  // typed as AgentAction here. Removed in Task 8 when scene components migrate.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const config: ParticleActionConfig | undefined = (particleMap as any)?.[action];
 
   const particlesRef = useRef<(ActiveParticle | null)[]>(
     Array.from({ length: MAX_PARTICLES }, () => null),

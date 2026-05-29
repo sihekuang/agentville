@@ -72,7 +72,10 @@ export function useAnimationFrames(
   status: "busy" | "idle",
 ): { textures: Texture[] | null; speed: number } {
   const action = status === "idle" ? "idle" : currentAction;
-  const anim = animConfig.animations[action] ?? animConfig.animations.idle;
+  // TEMP CAST: animConfig.animations is now Record<NormalizedAction>, but currentAction
+  // is still typed as AgentAction here. Removed in Task 8 when scene components migrate.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anim = (animConfig.animations as any)[action] ?? animConfig.animations.idle;
 
   const textures = useMemo(() => {
     if (!baseTexture) {
