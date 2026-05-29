@@ -40,3 +40,31 @@ export interface DiscoveredAgent {
 }
 
 export type { HostApp } from "../types";
+
+/**
+ * Build a uniform Agent id: `<provider>:<sessionId>`.
+ * Provider must be non-empty and contain no colons.
+ * sessionId must be non-empty (may contain colons; we split on the first).
+ */
+export function makeAgentId(provider: string, sessionId: string): string {
+  if (!provider) throw new Error("makeAgentId: provider must be non-empty");
+  if (!sessionId) throw new Error("makeAgentId: sessionId must be non-empty");
+  if (provider.includes(":")) {
+    throw new Error(`makeAgentId: provider must not contain ':' (got "${provider}")`);
+  }
+  return `${provider}:${sessionId}`;
+}
+
+/**
+ * Split a uniform Agent id back into its parts.
+ * Splits on the FIRST colon so a sessionId may itself contain colons.
+ * Returns null if the id is malformed (missing colon, empty provider, or empty sessionId).
+ */
+export function parseAgentId(id: string): { provider: string; sessionId: string } | null {
+  const i = id.indexOf(":");
+  if (i <= 0) return null;
+  const provider = id.slice(0, i);
+  const sessionId = id.slice(i + 1);
+  if (!provider || !sessionId) return null;
+  return { provider, sessionId };
+}
