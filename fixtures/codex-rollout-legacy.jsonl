@@ -1,0 +1,6 @@
+{"timestamp":"2025-09-29T18:28:22.967Z","type":"session_meta","payload":{"id":"019996bb-a122-7e10-a2ff-694a28a32ef6","timestamp":"2025-09-29T18:28:22.946Z","cwd":"/Users/test/proj","originator":"codex_cli_rs","cli_version":"0.39.0","instructions":"..."}}
+{"timestamp":"2025-09-29T18:28:23.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"check files"}]}}
+{"timestamp":"2025-09-29T18:28:24.000Z","type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"**Listing files**"}]}}
+{"timestamp":"2025-09-29T18:28:25.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"command\":[\"bash\",\"-lc\",\"cat README.md\"],\"workdir\":\"/Users/test/proj\"}","call_id":"call_a"}}
+{"timestamp":"2025-09-29T18:28:26.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"command\":[\"bash\",\"-lc\",\"npm install\"],\"workdir\":\"/Users/test/proj\"}","call_id":"call_b"}}
+{"timestamp":"2025-09-29T18:28:27.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Done."}]}}
