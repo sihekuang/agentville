@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getRegistry } from "@/lib/providers";
-import type { DiscoveredAgent } from "@/lib/providers";
+import type { Agent } from "@/lib/providers";
 import type { AgentState, AgentAction, StreamEvent, TranscriptEntry } from "@/lib/types";
 
 const POLL_INTERVAL = 2000;
 
 /** Map a NormalizedAction back to the legacy AgentAction type for the frontend */
 function toLegacyAction(
-  agent: DiscoveredAgent
+  agent: Agent
 ): { currentAction: AgentAction; lastToolName: string | null } {
   const recent = agent.recentActivity;
   const lastEntry = recent.length > 0 ? recent[recent.length - 1] : null;
@@ -54,8 +54,8 @@ function toLegacyAction(
   return { currentAction, lastToolName };
 }
 
-/** Bridge a provider-agnostic DiscoveredAgent to the legacy AgentState for the frontend */
-function toAgentState(agent: DiscoveredAgent): AgentState {
+/** Bridge a provider-agnostic Agent to the legacy AgentState for the frontend */
+function toAgentState(agent: Agent): AgentState {
   const { currentAction, lastToolName } = toLegacyAction(agent);
 
   const recentActions: TranscriptEntry[] = agent.recentActivity.map(

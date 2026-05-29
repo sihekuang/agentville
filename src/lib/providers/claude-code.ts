@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import type { AgentProvider } from "./provider";
-import type { DiscoveredAgent, NormalizedAction, ActivityEntry } from "./types";
+import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import type { AgentAction, TranscriptEntry } from "../types";
 import { discoverSessions, getTranscriptPath } from "../sessions";
 import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
@@ -99,14 +99,14 @@ export class ClaudeCodeProvider implements AgentProvider {
     }
   }
 
-  async discoverAgents(): Promise<DiscoveredAgent[]> {
+  async discoverAgents(): Promise<Agent[]> {
     const sessions = await discoverSessions(this.sessionsDir);
-    return sessions.map((session) => this.buildDiscoveredAgent(session));
+    return sessions.map((session) => this.buildAgent(session));
   }
 
-  private buildDiscoveredAgent(
+  private buildAgent(
     session: Awaited<ReturnType<typeof discoverSessions>>[number]
-  ): DiscoveredAgent {
+  ): Agent {
     const transcriptPath = getTranscriptPath(
       this.projectsDir,
       session.cwd,

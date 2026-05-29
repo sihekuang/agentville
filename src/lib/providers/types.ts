@@ -24,7 +24,7 @@ export interface ActivityEntry {
 }
 
 /** A discovered agent session, provider-agnostic */
-export interface DiscoveredAgent {
+export interface Agent {
   id: string;
   provider: string;
   pid: number;
@@ -34,7 +34,7 @@ export interface DiscoveredAgent {
   currentAction: NormalizedAction;
   recentActivity: ActivityEntry[];
   hostApp: HostApp | null;
-  subagents: DiscoveredAgent[];
+  subagents: Agent[];
   /** Provider-specific extras (e.g., version, entrypoint for Claude Code) */
   metadata?: Record<string, unknown>;
 }
