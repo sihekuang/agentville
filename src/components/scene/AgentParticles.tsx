@@ -4,7 +4,7 @@ import { useRef, useCallback } from "react";
 import { extend, useTick } from "@pixi/react";
 import { Container, Text } from "pixi.js";
 import type { Text as PixiText, Container as PixiContainer } from "pixi.js";
-import type { AgentAction } from "@/lib/types";
+import type { NormalizedAction } from "@/lib/providers/types";
 import type { ParticleStyle, ParticleActionConfig } from "./themes/theme-types";
 import { themeParticles } from "./particle-configs";
 
@@ -87,17 +87,14 @@ export function shouldSpawn(rate: number, dt: number): boolean {
 
 interface AgentParticlesProps {
   themeName: string;
-  currentAction: AgentAction;
+  currentAction: NormalizedAction;
   status: "busy" | "idle";
 }
 
 export function AgentParticles({ themeName, currentAction, status }: AgentParticlesProps) {
   const particleMap = themeParticles[themeName];
-  const action: AgentAction = status === "idle" ? "idle" : currentAction;
-  // TEMP CAST: particleMap is now Partial<Record<NormalizedAction>>, but action is still
-  // typed as AgentAction here. Removed in Task 8 when scene components migrate.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const config: ParticleActionConfig | undefined = (particleMap as any)?.[action];
+  const action: NormalizedAction = status === "idle" ? "idle" : currentAction;
+  const config: ParticleActionConfig | undefined = particleMap?.[action];
 
   const particlesRef = useRef<(ActiveParticle | null)[]>(
     Array.from({ length: MAX_PARTICLES }, () => null),

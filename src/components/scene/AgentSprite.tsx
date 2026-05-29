@@ -5,7 +5,7 @@ import { AnimatedSprite, Container, Graphics, Rectangle, Text, TextStyle, type T
 import { extend, useTick } from "@pixi/react";
 import { useAnimationFrames } from "./use-animation-frames";
 import { AgentParticles } from "./AgentParticles";
-import type { AgentAction } from "@/lib/types";
+import type { NormalizedAction } from "@/lib/providers/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
 extend({ AnimatedSprite, Container, Text, Graphics });
@@ -15,7 +15,7 @@ interface AgentSpriteProps {
   y: number;
   id: string;
   cwd: string;
-  currentAction: AgentAction;
+  currentAction: NormalizedAction;
   status: string;
   animConfig: AgentAnimationConfig;
   baseTexture: Texture | null;
@@ -473,27 +473,16 @@ export function AgentSprite({
   );
 }
 
-function formatAction(action: AgentAction): string {
+function formatAction(action: NormalizedAction): string {
   switch (action) {
-    case "thinking":
-      return "\u{1F4AD}";
-    case "tool:Read":
-      return "\u{1F4D6}";
-    case "tool:Edit":
-      return "✏️";
-    case "tool:Bash":
-      return "⚡";
-    case "tool:Write":
-      return "\u{1F4DD}";
-    case "tool:Agent":
-      return "\u{1F916}";
-    case "tool:other":
-      return "\u{1F527}";
-    case "writing":
-      return "\u{1F4AC}";
-    case "waiting":
-      return "❓";
-    case "idle":
-      return "";
+    case "reading":    return "Reading";
+    case "editing":    return "Editing";
+    case "executing":  return "Executing";
+    case "delegating": return "Delegating";
+    case "thinking":   return "Thinking";
+    case "writing":    return "Writing";
+    case "waiting":    return "Waiting";
+    case "other":      return "Working";
+    case "idle":       return "Idle";
   }
 }

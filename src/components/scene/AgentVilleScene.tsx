@@ -14,7 +14,6 @@ import { officeTheme } from "./themes/office";
 import { farmTheme } from "./themes/farm";
 import { workshopTheme } from "./themes/workshop";
 import type { SceneTheme, AgentSlot } from "./themes/theme-types";
-import type { AgentAction } from "@/lib/types";
 import type { Theme } from "@/store/agents";
 
 extend({ Container, Viewport });
@@ -170,7 +169,7 @@ function SceneContent({
               y={slot.y * dynamicTheme.tileSize}
               id={agent.id}
               cwd={agent.cwd}
-              currentAction={agent.currentAction as AgentAction}
+              currentAction={agent.currentAction}
               status={agent.status}
               animConfig={dynamicTheme.agent}
               baseTexture={spriteTexture}

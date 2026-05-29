@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Assets, Texture, Rectangle } from "pixi.js";
-import type { AgentAction } from "@/lib/types";
+import type { NormalizedAction } from "@/lib/providers/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
 const DEBUG = process.env.NODE_ENV === "development";
@@ -68,14 +68,11 @@ export function useLoadTexture(src: string): Texture | null {
 export function useAnimationFrames(
   baseTexture: Texture | null,
   animConfig: AgentAnimationConfig,
-  currentAction: AgentAction,
+  currentAction: NormalizedAction,
   status: "busy" | "idle",
 ): { textures: Texture[] | null; speed: number } {
   const action = status === "idle" ? "idle" : currentAction;
-  // TEMP CAST: animConfig.animations is now Record<NormalizedAction>, but currentAction
-  // is still typed as AgentAction here. Removed in Task 8 when scene components migrate.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anim = (animConfig.animations as any)[action] ?? animConfig.animations.idle;
+  const anim = animConfig.animations[action] ?? animConfig.animations.idle;
 
   const textures = useMemo(() => {
     if (!baseTexture) {
