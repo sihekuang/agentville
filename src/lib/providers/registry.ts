@@ -1,6 +1,6 @@
 import os from "os";
 import type { AgentProvider } from "./provider";
-import type { DiscoveredAgent } from "./types";
+import type { Agent } from "./types";
 import { ClaudeCodeProvider } from "./claude-code";
 
 class ProviderRegistry {
@@ -11,8 +11,8 @@ class ProviderRegistry {
   }
 
   /** Discover agents from ALL registered providers */
-  async discoverAll(): Promise<DiscoveredAgent[]> {
-    const results: DiscoveredAgent[] = [];
+  async discoverAll(): Promise<Agent[]> {
+    const results: Agent[] = [];
     for (const provider of this.providers) {
       if (provider.isAvailable()) {
         const agents = await provider.discoverAgents();
@@ -20,6 +20,10 @@ class ProviderRegistry {
       }
     }
     return results;
+  }
+
+  getByName(name: string): AgentProvider | null {
+    return this.providers.find((p) => p.name === name) ?? null;
   }
 
   getProviders(): readonly AgentProvider[] {

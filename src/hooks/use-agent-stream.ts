@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAgentStore } from "@/store/agents";
-import type { StreamEvent } from "@/lib/types";
+import type { StreamEvent } from "@/app/api/agents/stream/route";
 
 export function useAgentStream() {
   const addAgent = useAgentStore((s) => s.addAgent);
@@ -46,7 +46,7 @@ export function useAgentStream() {
                     addAgent(event.agent);
                     break;
                   case "agent-removed":
-                    removeAgent(event.agent.sessionId);
+                    removeAgent(event.agent.id);
                     break;
                   case "agent-updated":
                     updateAgent(event.agent);
@@ -57,7 +57,7 @@ export function useAgentStream() {
               }
             }
           }
-        } catch (err) {
+        } catch {
           if (cancelled) return;
         }
 

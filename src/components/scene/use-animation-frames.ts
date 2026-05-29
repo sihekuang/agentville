@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Assets, Texture, Rectangle } from "pixi.js";
-import type { AgentAction } from "@/lib/types";
+import type { NormalizedAction } from "@/lib/providers/types";
 import type { AgentAnimationConfig } from "./themes/theme-types";
 
 const DEBUG = process.env.NODE_ENV === "development";
@@ -68,7 +68,7 @@ export function useLoadTexture(src: string): Texture | null {
 export function useAnimationFrames(
   baseTexture: Texture | null,
   animConfig: AgentAnimationConfig,
-  currentAction: AgentAction,
+  currentAction: NormalizedAction,
   status: "busy" | "idle",
 ): { textures: Texture[] | null; speed: number } {
   const action = status === "idle" ? "idle" : currentAction;

@@ -1,69 +1,74 @@
 import { create } from "zustand";
-import type { AgentState } from "@/lib/types";
+import { useEffect } from "react";
+import type { Agent } from "@/lib/providers/types";
 
 export type Theme = "office" | "farm" | "workshop";
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["office", "farm", "workshop"]);
 const THEME_STORAGE_KEY = "agentville-theme";
 
-function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "office";
-  try {
-    const v = localStorage.getItem(THEME_STORAGE_KEY);
-    if (v && VALID_THEMES.has(v)) return v as Theme;
-  } catch {}
-  return "office";
-}
-
-/** Extended agent state that includes provider information */
-export interface TrackedAgent extends AgentState {
-  /** Which provider this agent came from (e.g., "claude-code") */
-  provider?: string;
-}
+/** Alias kept for callers; identical shape to Agent */
+export type TrackedAgent = Agent;
 
 interface AgentStore {
   agents: Record<string, TrackedAgent>;
   selectedAgentId: string | null;
   theme: Theme;
 
-  addAgent: (agent: AgentState | TrackedAgent) => void;
-  removeAgent: (sessionId: string) => void;
-  updateAgent: (agent: AgentState | TrackedAgent) => void;
-  selectAgent: (sessionId: string | null) => void;
+  addAgent: (agent: Agent) => void;
+  removeAgent: (id: string) => void;
+  updateAgent: (agent: Agent) => void;
+  selectAgent: (id: string | null) => void;
   setTheme: (theme: Theme) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
   agents: {},
   selectedAgentId: null,
-  theme: readStoredTheme(),
+  theme: "office",
 
   addAgent: (agent) =>
     set((state) => ({
-      agents: { ...state.agents, [agent.sessionId]: agent },
+      agents: { ...state.agents, [agent.id]: agent },
     })),
 
-  removeAgent: (sessionId) =>
+  removeAgent: (id) =>
     set((state) => {
-      const { [sessionId]: _, ...rest } = state.agents;
+      const { [id]: _, ...rest } = state.agents;
       return {
         agents: rest,
         selectedAgentId:
-          state.selectedAgentId === sessionId ? null : state.selectedAgentId,
+          state.selectedAgentId === id ? null : state.selectedAgentId,
       };
     }),
 
   updateAgent: (agent) =>
     set((state) => ({
-      agents: { ...state.agents, [agent.sessionId]: agent },
+      agents: { ...state.agents, [agent.id]: agent },
     })),
 
-  selectAgent: (sessionId) => set({ selectedAgentId: sessionId }),
+  selectAgent: (id) => set({ selectedAgentId: id }),
 
   setTheme: (theme) => {
     set({ theme });
     try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch {}
   },
 }));
+
+/**
+ * Call this hook once from a top-level client component (e.g. Providers).
+ * It hydrates the theme from localStorage after mount, avoiding an SSR mismatch
+ * that occurs when the store's initial state always returns "office" on the server.
+ */
+export function useHydratePersistedTheme(): void {
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(THEME_STORAGE_KEY);
+      if (v && VALID_THEMES.has(v)) {
+        useAgentStore.setState({ theme: v as Theme });
+      }
+    } catch {}
+  }, []);
+}
 
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {

@@ -83,6 +83,16 @@ public/
   sprites/          # Pixel-art sprite sheets per theme
 ```
 
+## Agent architecture (uniform interface + SOLID)
+
+All agents share **one interface end-to-end**. See `AGENTS.md` → "Architecture principles" for the SOLID rules; the AgentVille specifics:
+
+- **Single agent type:** `Agent` (`src/lib/providers/types.ts`) is the only agent representation across discovery → stream → store → scene. It uses `NormalizedAction` (`reading` / `editing` / `executing` / `thinking` / `writing` / `delegating` / `waiting` / `idle`) — never provider-specific action strings. The legacy `AgentState` / `AgentAction` (`src/lib/types.ts`) is deprecated and being removed; do not add new dependencies on it.
+- **Agent id:** `Agent.id` is `<provider>:<sessionId>` (e.g. `claude-code:abc-123`, `codex:019e74c2-…`), built with `makeAgentId` and split with `parseAgentId`. AgentVille never mints ids — the raw `sessionId` is read from the underlying tool. Consumers key off `agent.id` (React keys, store map, focus URL); the focus route splits the prefix to dispatch to the owning provider.
+- **Providers (datasources):** each agent source implements `AgentProvider` (`src/lib/providers/provider.ts`) and is registered in `ProviderRegistry` (`src/lib/providers/registry.ts`). Add a source by adding a provider + one `register()` call — never by special-casing a source in the stream route, store, or scene.
+- **Shared pipeline:** every provider follows the same flow — enumerate live sessions → parse transcript → normalize actions → resolve host app → assemble `Agent`. Only the source-specific steps (enumeration, transcript format) vary.
+- **Testability (DIP):** inject side-effecting dependencies (process scan, PID liveness, fs, clock) so providers are unit-testable with fixtures and no real processes.
+
 ## Focus Feature (macOS)
 
 The focus feature uses AppleScript files in `scripts/macos/` to activate and raise specific application windows. The host terminal/IDE running the dev server needs **Accessibility** permission in System Settings for window-level targeting (AXRaise) to work. Without it, focus falls back to simple app activation.

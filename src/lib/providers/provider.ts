@@ -1,4 +1,4 @@
-import type { DiscoveredAgent } from "./types";
+import type { Agent } from "./types";
 
 export interface AgentProvider {
   /** Unique identifier for this provider (e.g., "claude-code") */
@@ -8,7 +8,7 @@ export interface AgentProvider {
   readonly displayName: string;
 
   /** Discover all active agent sessions for this provider */
-  discoverAgents(): Promise<DiscoveredAgent[]>;
+  discoverAgents(): Promise<Agent[]>;
 
   /** Check if this provider is available on the current system */
   isAvailable(): boolean;

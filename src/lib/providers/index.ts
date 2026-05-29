@@ -1,6 +1,6 @@
 export type { AgentProvider } from "./provider";
 export type {
-  DiscoveredAgent,
+  Agent,
   NormalizedAction,
   ActivityEntry,
 } from "./types";

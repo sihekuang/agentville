@@ -1,5 +1,20 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useAgentStore } from "@/store/agents";
+import type { Agent } from "@/lib/providers/types";
+
+const makeAgent = (overrides?: Partial<Agent>): Agent => ({
+  id: "claude-code:abc-123",
+  provider: "claude-code",
+  pid: 12345,
+  cwd: "/test",
+  status: "busy",
+  currentAction: "thinking",
+  recentActivity: [],
+  subagents: [],
+  hostApp: null,
+  startedAt: Date.now(),
+  ...overrides,
+});
 
 describe("useAgentStore", () => {
   beforeEach(() => {
@@ -11,84 +26,40 @@ describe("useAgentStore", () => {
   });
 
   it("adds an agent", () => {
-    const agent = {
-      sessionId: "abc-123",
-      pid: 12345,
-      cwd: "/test",
-      status: "busy" as const,
-      currentAction: "thinking" as const,
-      lastToolName: null,
-      subagents: [],
-      hostApp: null,
-      startedAt: Date.now(),
-      recentActions: [],
-    };
+    const agent = makeAgent();
 
     useAgentStore.getState().addAgent(agent);
-    expect(useAgentStore.getState().agents["abc-123"]).toEqual(agent);
+    expect(useAgentStore.getState().agents["claude-code:abc-123"]).toEqual(agent);
   });
 
   it("removes an agent", () => {
-    const agent = {
-      sessionId: "abc-123",
-      pid: 12345,
-      cwd: "/test",
-      status: "idle" as const,
-      currentAction: "idle" as const,
-      lastToolName: null,
-      subagents: [],
-      hostApp: null,
-      startedAt: Date.now(),
-      recentActions: [],
-    };
+    const agent = makeAgent({ status: "idle", currentAction: "idle" });
 
     useAgentStore.getState().addAgent(agent);
-    useAgentStore.getState().removeAgent("abc-123");
-    expect(useAgentStore.getState().agents["abc-123"]).toBeUndefined();
+    useAgentStore.getState().removeAgent("claude-code:abc-123");
+    expect(useAgentStore.getState().agents["claude-code:abc-123"]).toBeUndefined();
   });
 
   it("clears selection when selected agent is removed", () => {
-    const agent = {
-      sessionId: "abc-123",
-      pid: 12345,
-      cwd: "/test",
-      status: "idle" as const,
-      currentAction: "idle" as const,
-      lastToolName: null,
-      subagents: [],
-      hostApp: null,
-      startedAt: Date.now(),
-      recentActions: [],
-    };
+    const agent = makeAgent({ status: "idle", currentAction: "idle" });
 
     useAgentStore.getState().addAgent(agent);
-    useAgentStore.getState().selectAgent("abc-123");
-    useAgentStore.getState().removeAgent("abc-123");
+    useAgentStore.getState().selectAgent("claude-code:abc-123");
+    useAgentStore.getState().removeAgent("claude-code:abc-123");
     expect(useAgentStore.getState().selectedAgentId).toBeNull();
   });
 
   it("updates an agent", () => {
-    const agent = {
-      sessionId: "abc-123",
-      pid: 12345,
-      cwd: "/test",
-      status: "idle" as const,
-      currentAction: "idle" as const,
-      lastToolName: null,
-      subagents: [],
-      hostApp: null,
-      startedAt: Date.now(),
-      recentActions: [],
-    };
+    const agent = makeAgent({ status: "idle", currentAction: "idle" });
 
     useAgentStore.getState().addAgent(agent);
     useAgentStore.getState().updateAgent({ ...agent, status: "busy" });
-    expect(useAgentStore.getState().agents["abc-123"].status).toBe("busy");
+    expect(useAgentStore.getState().agents["claude-code:abc-123"].status).toBe("busy");
   });
 
   it("selects and deselects an agent", () => {
-    useAgentStore.getState().selectAgent("abc-123");
-    expect(useAgentStore.getState().selectedAgentId).toBe("abc-123");
+    useAgentStore.getState().selectAgent("claude-code:abc-123");
+    expect(useAgentStore.getState().selectedAgentId).toBe("claude-code:abc-123");
 
     useAgentStore.getState().selectAgent(null);
     expect(useAgentStore.getState().selectedAgentId).toBeNull();
