@@ -14,6 +14,7 @@ import { officeTheme } from "./themes/office";
 import { farmTheme } from "./themes/farm";
 import { workshopTheme } from "./themes/workshop";
 import type { SceneTheme, AgentSlot } from "./themes/theme-types";
+import type { AgentAction } from "@/lib/types";
 import type { Theme } from "@/store/agents";
 
 extend({ Container, Viewport });
@@ -164,18 +165,18 @@ function SceneContent({
           const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
           return (
             <AgentSprite
-              key={agent.sessionId}
+              key={agent.id}
               x={slot.x * dynamicTheme.tileSize}
               y={slot.y * dynamicTheme.tileSize}
-              sessionId={agent.sessionId}
+              id={agent.id}
               cwd={agent.cwd}
-              currentAction={agent.currentAction}
+              currentAction={agent.currentAction as AgentAction}
               status={agent.status}
               animConfig={dynamicTheme.agent}
               baseTexture={spriteTexture}
               onClick={handleAgentClick}
               onDoubleClick={handleAgentDoubleClick}
-              isSelected={selectedAgentId === agent.sessionId}
+              isSelected={selectedAgentId === agent.id}
               isDark={isDark}
               themeName={themeName}
             />
@@ -197,7 +198,7 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   const spriteTexture = useLoadTexture(theme.agent.src);
 
   const agentList = Object.values(agents).sort((a, b) =>
-    a.sessionId.localeCompare(b.sessionId),
+    a.id.localeCompare(b.id),
   );
   const viewportInstanceRef = useRef<Viewport>(null);
 
@@ -217,14 +218,14 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   );
 
   const handleAgentClick = useCallback(
-    (sessionId: string) => {
-      selectAgent(selectedAgentId === sessionId ? null : sessionId);
+    (id: string) => {
+      selectAgent(selectedAgentId === id ? null : id);
     },
     [selectAgent, selectedAgentId],
   );
 
-  const handleAgentDoubleClick = useCallback((sessionId: string) => {
-    fetch(`/api/agents/${sessionId}/focus`, { method: "POST" }).catch(() => {});
+  const handleAgentDoubleClick = useCallback((id: string) => {
+    fetch(`/api/agents/${encodeURIComponent(id)}/focus`, { method: "POST" }).catch(() => {});
   }, []);
 
   const handleViewportReady = useCallback((vp: Viewport) => {

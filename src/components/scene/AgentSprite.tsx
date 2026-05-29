@@ -13,14 +13,14 @@ extend({ AnimatedSprite, Container, Text, Graphics });
 interface AgentSpriteProps {
   x: number;
   y: number;
-  sessionId: string;
+  id: string;
   cwd: string;
   currentAction: AgentAction;
   status: string;
   animConfig: AgentAnimationConfig;
   baseTexture: Texture | null;
-  onClick: (sessionId: string) => void;
-  onDoubleClick: (sessionId: string) => void;
+  onClick: (id: string) => void;
+  onDoubleClick: (id: string) => void;
   isSelected: boolean;
   isDark: boolean;
   themeName: string;
@@ -96,7 +96,7 @@ const SLEEPING_HEAD = {
 export function AgentSprite({
   x,
   y,
-  sessionId,
+  id,
   cwd,
   currentAction,
   status,
@@ -113,13 +113,13 @@ export function AgentSprite({
   const handleClick = useCallback(() => {
     const now = Date.now();
     if (now - lastClickRef.current < 400) {
-      onDoubleClick(sessionId);
+      onDoubleClick(id);
       lastClickRef.current = 0;
       return;
     }
     lastClickRef.current = now;
-    onClick(sessionId);
-  }, [onClick, onDoubleClick, sessionId]);
+    onClick(id);
+  }, [onClick, onDoubleClick, id]);
 
   // Normalize status: anything that isn't "idle" is treated as "busy"
   // for rendering. The session file can report statuses like "shell"
@@ -129,10 +129,10 @@ export function AgentSprite({
   const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, renderStatus);
 
   if (process.env.NODE_ENV === "development") {
-    const id = sessionId.slice(0, 6);
+    const shortId = id.slice(0, 6);
     const hasTex = !!textures;
     const hasBase = !!baseTexture;
-    console.log(`[Sprite:render] ${id} status=${status}→${renderStatus} action=${currentAction} baseTex=${hasBase} textures=${hasTex} frames=${textures?.length ?? 0}`);
+    console.log(`[Sprite:render] ${shortId} status=${status}→${renderStatus} action=${currentAction} baseTex=${hasBase} textures=${hasTex} frames=${textures?.length ?? 0}`);
   }
 
   const styles = useMemo(() => makeStyles(isDark), [isDark]);
@@ -173,15 +173,15 @@ export function AgentSprite({
     const sprite = spriteRef.current;
     if (!sprite) {
       if (process.env.NODE_ENV === "development" && textures) {
-        console.warn(`[Sprite:play] ${sessionId.slice(0, 6)} spriteRef is null but textures exist (${textures.length} frames)`);
+        console.warn(`[Sprite:play] ${id.slice(0, 6)} spriteRef is null but textures exist (${textures.length} frames)`);
       }
       return;
     }
     sprite.play();
     if (process.env.NODE_ENV === "development") {
-      console.log(`[Sprite:play] ${sessionId.slice(0, 6)} playing ${textures?.length ?? 0} frames`);
+      console.log(`[Sprite:play] ${id.slice(0, 6)} playing ${textures?.length ?? 0} frames`);
     }
-  }, [textures, sessionId]);
+  }, [textures, id]);
 
   const tickCallback = useCallback(
     (ticker: { deltaTime: number }) => {
@@ -267,7 +267,7 @@ export function AgentSprite({
 
   useTick(tickCallback);
 
-  const label = sessionId.slice(0, 6);
+  const label = id.slice(0, 6);
   const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
   const tint = renderStatus === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);

@@ -12,7 +12,7 @@ describe("ActionList", () => {
     const actions = [
       {
         timestamp: new Date("2024-01-01T09:41:12").getTime(),
-        type: "tool_use" as const,
+        category: "reading" as const,
         summary: "Read src/app.ts",
       },
     ];

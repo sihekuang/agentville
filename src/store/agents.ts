@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AgentState } from "@/lib/types";
+import type { Agent } from "@/lib/providers/types";
 
 export type Theme = "office" | "farm" | "workshop";
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["office", "farm", "workshop"]);
@@ -14,21 +14,18 @@ function readStoredTheme(): Theme {
   return "office";
 }
 
-/** Extended agent state that includes provider information */
-export interface TrackedAgent extends AgentState {
-  /** Which provider this agent came from (e.g., "claude-code") */
-  provider?: string;
-}
+/** Alias kept for callers; identical shape to Agent */
+export type TrackedAgent = Agent;
 
 interface AgentStore {
   agents: Record<string, TrackedAgent>;
   selectedAgentId: string | null;
   theme: Theme;
 
-  addAgent: (agent: AgentState | TrackedAgent) => void;
-  removeAgent: (sessionId: string) => void;
-  updateAgent: (agent: AgentState | TrackedAgent) => void;
-  selectAgent: (sessionId: string | null) => void;
+  addAgent: (agent: Agent) => void;
+  removeAgent: (id: string) => void;
+  updateAgent: (agent: Agent) => void;
+  selectAgent: (id: string | null) => void;
   setTheme: (theme: Theme) => void;
 }
 
@@ -39,25 +36,25 @@ export const useAgentStore = create<AgentStore>((set) => ({
 
   addAgent: (agent) =>
     set((state) => ({
-      agents: { ...state.agents, [agent.sessionId]: agent },
+      agents: { ...state.agents, [agent.id]: agent },
     })),
 
-  removeAgent: (sessionId) =>
+  removeAgent: (id) =>
     set((state) => {
-      const { [sessionId]: _, ...rest } = state.agents;
+      const { [id]: _, ...rest } = state.agents;
       return {
         agents: rest,
         selectedAgentId:
-          state.selectedAgentId === sessionId ? null : state.selectedAgentId,
+          state.selectedAgentId === id ? null : state.selectedAgentId,
       };
     }),
 
   updateAgent: (agent) =>
     set((state) => ({
-      agents: { ...state.agents, [agent.sessionId]: agent },
+      agents: { ...state.agents, [agent.id]: agent },
     })),
 
-  selectAgent: (sessionId) => set({ selectedAgentId: sessionId }),
+  selectAgent: (id) => set({ selectedAgentId: id }),
 
   setTheme: (theme) => {
     set({ theme });

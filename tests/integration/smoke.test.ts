@@ -7,6 +7,7 @@ import { parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcri
 import { identifyAppFromProcessName } from "@/lib/host-app";
 import { resolveAppNames } from "@/lib/platform/macos";
 import { useAgentStore } from "@/store/agents";
+import { makeAgentId } from "@/lib/providers/types";
 
 describe("integration: full pipeline", () => {
   const tmpDir = path.join(os.tmpdir(), "agentville-integration");
@@ -54,7 +55,10 @@ describe("integration: full pipeline", () => {
 
     // 5. Derive current action
     const action = currentActionFromTranscript(entries);
-    expect(["thinking", "writing", "tool:Read", "tool:Edit", "tool:Bash", "tool:Write", "idle", "tool:other", "tool:Agent"]).toContain(action);
+    expect([
+      "thinking", "reading", "editing", "executing", "writing",
+      "delegating", "other", "waiting", "idle",
+    ]).toContain(action);
 
     // 6. Test host app identification
     expect(identifyAppFromProcessName("/Applications/iTerm2.app/Contents/MacOS/iTerm2")).toEqual({
@@ -68,22 +72,28 @@ describe("integration: full pipeline", () => {
     expect(processName).toBe("iTerm2");
 
     // 8. Populate store
+    const id = makeAgentId("claude-code", sessions[0].sessionId);
     const store = useAgentStore.getState();
     store.addAgent({
-      sessionId: sessions[0].sessionId,
+      id,
+      provider: "claude-code",
       pid: sessions[0].pid,
       cwd: sessions[0].cwd,
       status: sessions[0].status,
       currentAction: action,
-      lastToolName: null,
+      recentActivity: entries.slice(-20).map((e) => ({
+        timestamp: e.timestamp,
+        category: action,
+        summary: e.summary,
+        rawType: e.type,
+      })),
       subagents: [],
       hostApp: null,
       startedAt: sessions[0].startedAt,
-      recentActions: entries.slice(-20),
     });
 
     const agents = useAgentStore.getState().agents;
     expect(Object.keys(agents)).toHaveLength(1);
-    expect(agents["abc-123-def"].status).toBe("busy");
+    expect(agents[id].status).toBe("busy");
   });
 });

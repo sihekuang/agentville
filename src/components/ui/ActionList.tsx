@@ -1,9 +1,9 @@
 "use client";
 
-import type { TranscriptEntry } from "@/lib/types";
+import type { ActivityEntry } from "@/lib/providers/types";
 
 interface ActionListProps {
-  actions: TranscriptEntry[];
+  actions: ActivityEntry[];
 }
 
 export function ActionList({ actions }: ActionListProps) {

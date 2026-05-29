@@ -72,7 +72,7 @@ export function SidePanel() {
 
   const handleFocus = async () => {
     try {
-      const res = await fetch(`/api/agents/${agent.sessionId}/focus`, { method: "POST" });
+      const res = await fetch(`/api/agents/${encodeURIComponent(agent.id)}/focus`, { method: "POST" });
       const data = await res.json();
       setFocusInfo(data);
     } catch {
@@ -81,10 +81,18 @@ export function SidePanel() {
   };
 
   const formatAction = (action: string): string => {
-    if (action.startsWith("tool:")) return action.replace("tool:", "Using ");
-    if (action === "thinking") return "Thinking...";
-    if (action === "writing") return "Writing response...";
-    return "Idle";
+    switch (action) {
+      case "thinking": return "Thinking...";
+      case "reading": return "Using Read";
+      case "editing": return "Using Edit";
+      case "executing": return "Using Bash";
+      case "writing": return "Writing response...";
+      case "delegating": return "Using Agent";
+      case "other": return "Using tool";
+      case "waiting": return "Waiting...";
+      case "idle": return "Idle";
+      default: return action;
+    }
   };
 
   return (
@@ -92,7 +100,7 @@ export function SidePanel() {
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold text-foreground truncate">
-            {agent.sessionId.slice(0, 8)}
+            {agent.id.slice(0, 8)}
           </h2>
           <button
             onClick={() => selectAgent(null)}
@@ -136,7 +144,7 @@ export function SidePanel() {
         <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
           Recent Actions
         </h3>
-        <ActionList actions={agent.recentActions} />
+        <ActionList actions={agent.recentActivity} />
       </div>
 
       {agent.subagents.length > 0 && (
@@ -147,12 +155,12 @@ export function SidePanel() {
           <ul className="space-y-1">
             {agent.subagents.map((sub) => (
               <li
-                key={sub.sessionId}
-                onClick={() => selectAgent(sub.sessionId)}
+                key={sub.id}
+                onClick={() => selectAgent(sub.id)}
                 className="flex items-center gap-2 text-xs text-secondary-foreground cursor-pointer hover:text-foreground"
               >
                 <StatusBadge status={sub.status} />
-                <span className="truncate">{sub.sessionId.slice(0, 8)}</span>
+                <span className="truncate">{sub.id.slice(0, 8)}</span>
               </li>
             ))}
           </ul>
