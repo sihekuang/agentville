@@ -2,6 +2,7 @@ import os from "os";
 import type { AgentProvider } from "./provider";
 import type { Agent } from "./types";
 import { ClaudeCodeProvider } from "./claude-code";
+import { CodexProvider } from "./codex";
 
 class ProviderRegistry {
   private providers: AgentProvider[] = [];
@@ -37,11 +38,11 @@ export function getRegistry(): ProviderRegistry {
   if (!instance) {
     instance = new ProviderRegistry();
     instance.register(new ClaudeCodeProvider());
-    // Future: instance.register(new CodexProvider());
+    instance.register(new CodexProvider());
     // Future: instance.register(new GeminiCliProvider());
 
     const home = process.env.HOME || os.homedir();
-    console.log(`[agentville] provider registry initialized — watching ${home}/.claude/sessions/`);
+    console.log(`[agentville] provider registry initialized — claude-code @ ${home}/.claude/sessions/, codex via pgrep+lsof`);
   }
   return instance;
 }
