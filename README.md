@@ -1,13 +1,15 @@
 # AgentVille
 
-A real-time visualization dashboard for Claude Code agents. It discovers running Claude Code sessions on your machine and renders each agent as a pixel-art sprite in a themed isometric scene, showing what every agent is doing at a glance.
+A real-time visualization dashboard for AI coding agents. It discovers running **Claude Code** and **OpenAI Codex** sessions on your machine and renders each agent as a pixel-art sprite in a themed isometric scene, showing what every agent is doing at a glance.
 
 ## Features
 
-- **Live agent discovery** — polls `~/.claude/sessions/` for active Claude Code processes and streams updates via SSE
-- **Pixel-art scene** — agents are rendered as animated sprites on a PixiJS tilemap with idle/busy animations mapped to their current action (reading, editing, writing code, thinking, etc.)
-- **Themes** — switch between Office, Farm, and Workshop tile sets, each with its own sprites and floor tiles
-- **Side panel** — click an agent to inspect its session details, current action, working directory, subagents, and recent transcript
+- **Live multi-provider discovery** — Claude Code sessions (via `~/.claude/sessions/`) and Codex sessions (via `pgrep` + `lsof` on live `codex` processes) are streamed via SSE and rendered side-by-side in the same scene
+- **Pluggable provider architecture** — every agent is represented by a single shared `Agent` interface using a neutral action vocabulary (`reading` / `editing` / `executing` / `thinking` / `writing` / `delegating` / `waiting` / `idle`). Adding a new source (Gemini CLI, Cursor, …) is one new provider class + one `register()` call — no changes to the stream, store, or scene
+- **Pixel-art scene** — agents are animated sprites on a PixiJS tilemap; emotes update in real time as each agent works
+- **Themes** — switch between Office, Farm, and Workshop tile sets
+- **Side panel** — click an agent to inspect its full id (`<provider>:<sessionId>`), current action, host app, working directory, subagents, and recent transcript
+- **Double-click to focus** — brings the agent's host terminal or IDE window to the front (macOS)
 - **Resizable layout** — drag the handle between the scene and the side panel
 
 ## Tech Stack
@@ -52,7 +54,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:4200](http://localhost:4200). The app will automatically discover any running Claude Code sessions.
+Open [http://localhost:4200](http://localhost:4200). The app will automatically discover any running Claude Code or Codex sessions.
 
 ### macOS Accessibility Permission
 
@@ -79,14 +81,21 @@ Without this permission, clicking Focus will still activate the host application
 
 ```
 src/
-  app/             # Next.js app router (pages, API routes)
-    api/agents/    # SSE stream endpoint for agent state
+  app/                # Next.js app router (pages, API routes)
+    api/agents/       # SSE stream + focus endpoint
   components/
-    scene/         # PixiJS scene, tilemap, agent sprites, theme config
-    ui/            # Header, SidePanel, action list, status badge
-  hooks/           # useAgentStream (SSE client)
-  lib/             # Session discovery, transcript parsing, types
-  store/           # Zustand store (agents, theme, selection)
+    scene/            # PixiJS scene, tilemap, agent sprites, theme config
+    ui/               # Header, SidePanel, action list, status badge
+  hooks/              # useAgentStream (SSE client)
+  lib/
+    providers/        # Agent / AgentProvider / ProviderRegistry; ClaudeCodeProvider; CodexProvider
+    codex/            # Codex rollout parser + pgrep/lsof process discovery
+    sessions.ts       # Claude session discovery
+    transcript.ts     # Claude transcript parsing
+    host-app.ts       # Resolve agent PID → host terminal/IDE for focus
+  store/              # Zustand store (agents, theme, selection)
 public/
-  sprites/         # Pixel-art tile and character PNGs per theme
+  sprites/            # Pixel-art tile and character PNGs per theme
 ```
+
+See [`AGENTS.md`](AGENTS.md) for the architecture principles (uniform `Agent` interface, SOLID, pluggable datasources).
