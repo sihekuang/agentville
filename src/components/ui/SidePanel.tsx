@@ -99,8 +99,8 @@ export function SidePanel() {
     <div className="bg-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-foreground truncate">
-            {agent.id.slice(0, 8)}
+          <h2 className="text-xs font-mono font-bold text-foreground break-all select-all leading-tight mr-2">
+            {agent.id}
           </h2>
           <button
             onClick={() => selectAgent(null)}
@@ -197,12 +197,6 @@ export function SidePanel() {
           <div className="flex justify-between">
             <dt className="text-muted-foreground">PID</dt>
             <dd className="text-secondary-foreground">{agent.pid}</dd>
-          </div>
-          <div className="pt-1">
-            <dt className="text-muted-foreground mb-1">Session ID</dt>
-            <dd className="text-secondary-foreground font-mono break-all select-all text-[11px] leading-tight">
-              {agent.id}
-            </dd>
           </div>
         </dl>
       </div>
