@@ -198,6 +198,12 @@ export function SidePanel() {
             <dt className="text-muted-foreground">PID</dt>
             <dd className="text-secondary-foreground">{agent.pid}</dd>
           </div>
+          <div className="pt-1">
+            <dt className="text-muted-foreground mb-1">Session ID</dt>
+            <dd className="text-secondary-foreground font-mono break-all select-all text-[11px] leading-tight">
+              {agent.id}
+            </dd>
+          </div>
         </dl>
       </div>
 
