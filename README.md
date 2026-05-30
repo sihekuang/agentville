@@ -2,6 +2,8 @@
 
 A real-time visualization dashboard for AI coding agents. It discovers running **Claude Code** and **OpenAI Codex** sessions on your machine and renders each agent as a pixel-art sprite in a themed isometric scene, showing what every agent is doing at a glance.
 
+![AgentVille scene with Claude Code and Codex agents](docs/screenshots/scene-multi-provider.png)
+
 ## Features
 
 - **Live multi-provider discovery** — Claude Code sessions (via `~/.claude/sessions/`) and Codex sessions (via `pgrep` + `lsof` on live `codex` processes) are streamed via SSE and rendered side-by-side in the same scene
