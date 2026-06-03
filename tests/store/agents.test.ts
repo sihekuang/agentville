@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useAgentStore } from "@/store/agents";
 import type { Agent } from "@/lib/providers/types";
+import { DEFAULT_IDLE_TIMEOUT_MS } from "@/lib/idle-detection";
 
 const makeAgent = (overrides?: Partial<Agent>): Agent => ({
   id: "claude-code:abc-123",
@@ -68,5 +69,28 @@ describe("useAgentStore", () => {
   it("changes the theme", () => {
     useAgentStore.getState().setTheme("farm");
     expect(useAgentStore.getState().theme).toBe("farm");
+  });
+});
+
+describe("idleTimeoutMs store slice", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useAgentStore.setState({ idleTimeoutMs: DEFAULT_IDLE_TIMEOUT_MS });
+  });
+
+  it("defaults to DEFAULT_IDLE_TIMEOUT_MS", () => {
+    expect(useAgentStore.getState().idleTimeoutMs).toBe(DEFAULT_IDLE_TIMEOUT_MS);
+  });
+
+  it("setIdleTimeoutMs updates state and persists to localStorage", () => {
+    useAgentStore.getState().setIdleTimeoutMs(120_000);
+    expect(useAgentStore.getState().idleTimeoutMs).toBe(120_000);
+    expect(localStorage.getItem("agentville-idle-timeout")).toBe("120000");
+  });
+
+  it("setIdleTimeoutMs(0) represents Off", () => {
+    useAgentStore.getState().setIdleTimeoutMs(0);
+    expect(useAgentStore.getState().idleTimeoutMs).toBe(0);
+    expect(localStorage.getItem("agentville-idle-timeout")).toBe("0");
   });
 });
