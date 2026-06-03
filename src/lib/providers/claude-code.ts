@@ -6,7 +6,7 @@ import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
 import type { TranscriptEntry } from "../transcript";
 import { discoverSessions, getTranscriptPath } from "../sessions";
-import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
+import { parseTranscriptLine, currentActionFromTranscript, lastTokenFlowAt } from "../transcript";
 import { resolveHostApp } from "../host-app";
 
 const MAX_RECENT_ACTIONS = 20;
@@ -90,6 +90,7 @@ export class ClaudeCodeProvider implements AgentProvider {
     );
 
     let recentTranscript: TranscriptEntry[] = [];
+    let lastTokenActivityAt: number | undefined;
     if (transcriptPath) {
       try {
         const raw = fs.readFileSync(transcriptPath, "utf-8");
@@ -100,6 +101,7 @@ export class ClaudeCodeProvider implements AgentProvider {
           if (entry) allEntries.push(entry);
         }
         recentTranscript = allEntries.slice(-MAX_RECENT_ACTIONS);
+        lastTokenActivityAt = lastTokenFlowAt(lines);
       } catch (err) {
         console.warn(`[agentville] failed to read transcript for ${session.sessionId.slice(0, 8)}:`, (err as Error).message);
       }
@@ -127,6 +129,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       startedAt: session.startedAt,
       currentAction,
       recentActivity: recentTranscript.map(toActivityEntry),
+      lastTokenActivityAt,
       hostApp,
       subagents: [],
       metadata: {
