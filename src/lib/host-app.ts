@@ -65,47 +65,72 @@ function readIdeLockDir(ideDir: string): RawIdeLock[] {
 
 const hostAppCache = new Map<string, HostApp | null>();
 
+/**
+ * Side-effecting lookups, injected so resolution is unit-testable without
+ * real processes. Default to the platform strategy in production.
+ */
+export interface HostAppDeps {
+  getParentPids: (pid: number) => number[];
+  getProcessName: (pid: number) => string | null;
+}
+
 export function resolveHostApp(
   pid: number,
   cwd: string,
   sessionId: string,
-  ideDir?: string
+  ideDir?: string,
+  deps?: HostAppDeps
 ): HostApp | null {
   const cacheKey = sessionId;
   if (hostAppCache.has(cacheKey)) return hostAppCache.get(cacheKey)!;
 
+  const platform = getPlatform();
+  const getParentPids = deps?.getParentPids ?? ((p) => platform.getParentPids(p));
+  const getProcessName = deps?.getProcessName ?? ((p) => platform.getProcessName(p));
+
+  // The session's actual ancestry is ground truth for where it runs. Compute it
+  // once and use it both to validate IDE locks and to scan for terminals/IDEs.
+  const parentPids = getParentPids(pid);
+
   const ideLockDir =
     ideDir ?? path.join(process.env.HOME || os.homedir(), ".claude", "ide");
   const ideLocks = readIdeLockDir(ideLockDir);
+
+  const ownsCwd = (lock: RawIdeLock) =>
+    lock.workspaceFolders.some((ws) => cwd.startsWith(ws));
+
+  const cache = (result: HostApp): HostApp => {
+    hostAppCache.set(cacheKey, result);
+    return result;
+  };
+
+  // 1. Trust an IDE lock only when the session genuinely descends from that IDE.
+  //    A lock means "this IDE has the folder open" — NOT "this session runs in
+  //    it". Matching on cwd alone wrongly claims sessions started in a separate
+  //    terminal (e.g. Warp) that happen to sit under an IDE's workspace folder.
   for (const lock of ideLocks) {
-    if (lock.workspaceFolders.some((ws) => cwd.startsWith(ws))) {
-      const result: HostApp = {
-        type: "ide",
-        name: lock.ideName,
-        pid: lock.pid,
-        cwd,
-      };
-      hostAppCache.set(cacheKey, result);
-      return result;
+    if (ownsCwd(lock) && parentPids.includes(lock.pid)) {
+      return cache({ type: "ide", name: lock.ideName, pid: lock.pid, cwd });
     }
   }
 
-  const platform = getPlatform();
-  const parentPids = platform.getParentPids(pid);
+  // 2. Walk the parent-process chain for a known terminal or IDE. This is where
+  //    a standalone-terminal session (Warp, iTerm, …) is correctly identified.
   for (const ppid of parentPids) {
-    const processName = platform.getProcessName(ppid);
+    const processName = getProcessName(ppid);
     if (!processName) continue;
 
     const app = identifyAppFromProcessName(processName);
     if (app) {
-      const result: HostApp = {
-        type: app.type,
-        name: app.name,
-        pid: ppid,
-        cwd,
-      };
-      hostAppCache.set(cacheKey, result);
-      return result;
+      return cache({ type: app.type, name: app.name, pid: ppid, cwd });
+    }
+  }
+
+  // 3. Last resort: if the chain revealed no recognizable host (e.g. the session
+  //    was re-parented to init), fall back to an IDE that has the folder open.
+  for (const lock of ideLocks) {
+    if (ownsCwd(lock)) {
+      return cache({ type: "ide", name: lock.ideName, pid: lock.pid, cwd });
     }
   }
 

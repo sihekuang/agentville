@@ -15,6 +15,7 @@ interface AgentSpriteProps {
   y: number;
   id: string;
   cwd: string;
+  hostAppName?: string | null;
   currentAction: NormalizedAction;
   status: string;
   animConfig: AgentAnimationConfig;
@@ -46,6 +47,20 @@ function makeStyles(isDark: boolean) {
       fontSize: 7 * TEXT_RES,
       fill: isDark ? 0xffffff : 0x222222,
       fontFamily: "monospace",
+      align: "center",
+    }),
+    hostLabel: new TextStyle({
+      fontSize: 5 * TEXT_RES,
+      fill: isDark ? 0xaab4c4 : 0x667084,
+      fontFamily: "monospace",
+      fontStyle: "italic",
+      align: "center",
+    }),
+    selectedHostLabel: new TextStyle({
+      fontSize: 5 * TEXT_RES,
+      fill: isDark ? 0xddbb33 : 0xaa7700,
+      fontFamily: "monospace",
+      fontStyle: "italic",
       align: "center",
     }),
     selectedDirLabel: new TextStyle({
@@ -98,6 +113,7 @@ export function AgentSprite({
   y,
   id,
   cwd,
+  hostAppName,
   currentAction,
   status,
   animConfig,
@@ -269,6 +285,10 @@ export function AgentSprite({
 
   const label = (parseAgentId(id)?.provider ?? id).slice(0, 6);
   const dirName = cwd.split("/").filter(Boolean).pop() || cwd;
+  const hostName = hostAppName?.trim() || null;
+  // Nameplate stacks: folder (top) → host app (middle, optional) → provider.
+  const baseY = animConfig.frameHeight / 2;
+  const providerY = hostName ? baseY + 20 : baseY + 14;
   const tint = renderStatus === "busy" ? 0xffffff : styles.idleTint;
   const emote = formatAction(currentAction);
 
@@ -393,14 +413,23 @@ export function AgentSprite({
         style={isSelected ? styles.selectedDirLabel : styles.dirLabel}
         anchor={0.5}
         scale={1 / TEXT_RES}
-        y={animConfig.frameHeight / 2 + 6}
+        y={baseY + 6}
       />
+      {hostName && (
+        <pixiText
+          text={hostName}
+          style={isSelected ? styles.selectedHostLabel : styles.hostLabel}
+          anchor={0.5}
+          scale={1 / TEXT_RES}
+          y={baseY + 13}
+        />
+      )}
       <pixiText
         text={label}
         style={isSelected ? styles.selectedLabel : styles.label}
         anchor={0.5}
         scale={1 / TEXT_RES}
-        y={animConfig.frameHeight / 2 + 14}
+        y={providerY}
       />
       {renderStatus === "busy" && emote && (
         <pixiText

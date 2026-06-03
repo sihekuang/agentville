@@ -169,6 +169,7 @@ function SceneContent({
               y={slot.y * dynamicTheme.tileSize}
               id={agent.id}
               cwd={agent.cwd}
+              hostAppName={agent.hostApp?.name ?? null}
               currentAction={agent.currentAction}
               status={agent.status}
               animConfig={dynamicTheme.agent}
