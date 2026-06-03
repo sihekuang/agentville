@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRegistry } from "@/lib/providers";
 import type { Agent } from "@/lib/providers/types";
+import { applyIdleOverride, parseIdleTimeoutParam } from "@/lib/idle-detection";
 
 const POLL_INTERVAL = 2000;
 
@@ -9,7 +10,8 @@ export interface StreamEvent {
   agent: Agent;
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
+  const timeoutMs = parseIdleTimeoutParam(new URL(req.url).searchParams.get("idleTimeoutMs"));
   const encoder = new TextEncoder();
   let cancelled = false;
 
@@ -21,7 +23,9 @@ export async function GET(): Promise<Response> {
       const poll = async () => {
         if (cancelled) return;
         try {
-          const discovered = await registry.discoverAll();
+          const discovered = (await registry.discoverAll()).map((a) =>
+            applyIdleOverride(a, Date.now(), timeoutMs),
+          );
           const currentIds = new Set(discovered.map((a) => a.id));
 
           for (const agent of discovered) {
