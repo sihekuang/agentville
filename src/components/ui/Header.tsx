@@ -34,6 +34,7 @@ export function Header() {
   const agentList = Object.values(agents);
   const busyCount = agentList.filter((a) => a.status === "busy").length;
   const idleCount = agentList.filter((a) => a.status === "idle").length;
+  const stalledCount = agentList.filter((a) => a.status === "stalled").length;
 
   return (
     <header className="titlebar-drag flex items-center justify-between pl-24 pr-4 py-2 bg-card border-b border-border">
@@ -45,6 +46,9 @@ export function Header() {
           <span>{agentList.length} agents</span>
           <span className="text-green-500 dark:text-green-400">{busyCount} busy</span>
           <span className="text-muted-foreground">{idleCount} idle</span>
+          {stalledCount > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">{stalledCount} stalled</span>
+          )}
         </div>
         <Popover>
           <PopoverTrigger
