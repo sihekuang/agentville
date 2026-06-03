@@ -1,7 +1,7 @@
 "use client";
 
 interface StatusBadgeProps {
-  status: "busy" | "idle" | "waiting";
+  status: "busy" | "idle" | "waiting" | "stalled";
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
