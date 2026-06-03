@@ -23,6 +23,8 @@ export function SidePanel() {
   const agents = useAgentStore((s) => s.agents);
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
   const selectAgent = useAgentStore((s) => s.selectAgent);
+  const idleTimeoutMs = useAgentStore((s) => s.idleTimeoutMs);
+  const setIdleTimeoutMs = useAgentStore((s) => s.setIdleTimeoutMs);
   const [focusInfo, setFocusInfo] = useState<FocusDebugInfo | null>(null);
 
   const agent = selectedAgentId ? agents[selectedAgentId] : null;
@@ -64,7 +66,30 @@ export function SidePanel() {
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground" />
               Idle (dimmed)
             </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+              Stalled (auto-idle)
+            </span>
           </div>
+        </div>
+        <div className="p-4 border-t border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+            Idle Timeout
+          </h3>
+          <select
+            value={idleTimeoutMs}
+            onChange={(e) => setIdleTimeoutMs(Number(e.target.value))}
+            className="w-full text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+          >
+            <option value={30000}>30 seconds</option>
+            <option value={60000}>1 minute</option>
+            <option value={120000}>2 minutes</option>
+            <option value={300000}>5 minutes</option>
+            <option value={0}>Off</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+            Mark an agent &ldquo;stalled&rdquo; after this long with no token activity, even if it still reports busy.
+          </p>
         </div>
       </div>
     );
@@ -109,7 +134,19 @@ export function SidePanel() {
             x
           </button>
         </div>
-        <StatusBadge status={agent.status} />
+        <StatusBadge
+          status={agent.status}
+          title={
+            agent.status === "stalled"
+              ? `No token activity for ${Math.round(idleTimeoutMs / 1000)}s — auto-idled`
+              : undefined
+          }
+        />
+        {agent.status === "stalled" && (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            No token activity for {Math.round(idleTimeoutMs / 1000)}s — auto-idled.
+          </p>
+        )}
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
