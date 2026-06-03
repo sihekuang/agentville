@@ -8,6 +8,7 @@ export function useAgentStream() {
   const addAgent = useAgentStore((s) => s.addAgent);
   const removeAgent = useAgentStore((s) => s.removeAgent);
   const updateAgent = useAgentStore((s) => s.updateAgent);
+  const idleTimeoutMs = useAgentStore((s) => s.idleTimeoutMs);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -19,7 +20,8 @@ export function useAgentStream() {
           const controller = new AbortController();
           abortRef.current = controller;
 
-          const response = await fetch("/api/agents/stream", {
+          const url = `/api/agents/stream?idleTimeoutMs=${idleTimeoutMs === 0 ? "off" : idleTimeoutMs}`;
+          const response = await fetch(url, {
             signal: controller.signal,
           });
 
@@ -73,5 +75,5 @@ export function useAgentStream() {
       cancelled = true;
       abortRef.current?.abort();
     };
-  }, [addAgent, removeAgent, updateAgent]);
+  }, [addAgent, removeAgent, updateAgent, idleTimeoutMs]);
 }
