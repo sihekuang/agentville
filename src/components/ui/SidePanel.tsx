@@ -31,7 +31,7 @@ export function SidePanel() {
 
   if (!agent) {
     return (
-      <div className="bg-card flex flex-col h-full overflow-hidden">
+      <div className="bg-card flex flex-col h-full overflow-y-auto">
         <div className="p-4 border-b border-border">
           <h2 className="text-sm font-bold text-foreground">AgentVille</h2>
           <p className="text-xs text-muted-foreground mt-1">
@@ -67,7 +67,7 @@ export function SidePanel() {
               Idle (dimmed)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
               Stalled (auto-idle)
             </span>
           </div>
