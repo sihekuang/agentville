@@ -68,6 +68,14 @@ export class CodexProvider implements AgentProvider {
     const entries: CodexEntry[] = parseCodexRollout(raw);
     const recent = entries.slice(-MAX_RECENT_ACTIONS);
 
+    let lastTokenActivityAt: number | undefined;
+    for (const e of entries) {
+      if (lastTokenActivityAt === undefined || e.timestamp > lastTokenActivityAt) {
+        lastTokenActivityAt = e.timestamp;
+      }
+    }
+    if (lastTokenActivityAt === undefined) lastTokenActivityAt = mtimeMs;
+
     const currentAction: NormalizedAction = recent.length > 0
       ? normalizeCodexAction(recent[recent.length - 1])
       : "idle";
@@ -94,6 +102,7 @@ export class CodexProvider implements AgentProvider {
       startedAt: mtimeMs,
       currentAction,
       recentActivity,
+      lastTokenActivityAt,
       hostApp,
       subagents: [],
       metadata: { rolloutPath: p.rolloutPath },
