@@ -125,7 +125,12 @@ export class ClaudeCodeProvider implements AgentProvider {
       provider: this.name,
       pid: session.pid,
       cwd: session.cwd,
-      status: session.status === "waiting" ? "busy" : session.status,
+      // Claude Code can report non-canonical statuses (e.g. "shell") that aren't
+      // in the Agent vocabulary. Collapse anything that isn't "idle" to the
+      // canonical "busy" so downstream consumers agree: the idle override (which
+      // only acts on "busy") and the scene (which paints non-idle as working).
+      // "waiting" → "busy" keeps the active look; currentAction preserves "waiting".
+      status: session.status === "idle" ? "idle" : "busy",
       startedAt: session.startedAt,
       currentAction,
       recentActivity: recentTranscript.map(toActivityEntry),
