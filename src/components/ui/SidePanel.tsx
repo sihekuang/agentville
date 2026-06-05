@@ -81,10 +81,10 @@ export function SidePanel() {
             onChange={(e) => setIdleTimeoutMs(Number(e.target.value))}
             className="w-full text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
           >
-            <option value={30000}>30 seconds</option>
             <option value={60000}>1 minute</option>
-            <option value={120000}>2 minutes</option>
             <option value={300000}>5 minutes</option>
+            <option value={600000}>10 minutes</option>
+            <option value={1800000}>30 minutes</option>
             <option value={0}>Off</option>
           </select>
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">

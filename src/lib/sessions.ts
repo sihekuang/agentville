@@ -70,13 +70,29 @@ export async function discoverSessions(
   return sessions;
 }
 
+/** Claude Code encodes a session's cwd into its projects/ dir name. */
+export function escapeCwd(cwd: string): string {
+  return cwd.replace(/[/.]/g, "-");
+}
+
 export function getTranscriptPath(
   projectsDir: string,
   cwd: string,
   sessionId: string
 ): string | null {
-  const escaped = cwd.replace(/[/.]/g, "-");
-  const jsonlPath = path.join(projectsDir, escaped, `${sessionId}.jsonl`);
+  const jsonlPath = path.join(projectsDir, escapeCwd(cwd), `${sessionId}.jsonl`);
   if (fs.existsSync(jsonlPath)) return jsonlPath;
   return null;
+}
+
+/**
+ * The per-session artifact directory (`projects/<escaped-cwd>/<sessionId>/`)
+ * that holds `subagents/` and `tool-results/`. Returned regardless of existence.
+ */
+export function getSessionDir(
+  projectsDir: string,
+  cwd: string,
+  sessionId: string
+): string {
+  return path.join(projectsDir, escapeCwd(cwd), sessionId);
 }

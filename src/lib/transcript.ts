@@ -19,7 +19,6 @@ interface RawTranscriptLine {
       id?: string;
       input?: Record<string, unknown>;
     }>;
-    usage?: Record<string, unknown>;
   };
   sessionId?: string;
   uuid?: string;
@@ -129,30 +128,4 @@ export function parseTranscriptFile(filePath: string): TranscriptEntry[] {
   }
 
   return entries;
-}
-
-/**
- * Scan raw transcript JSONL lines for the newest assistant turn carrying a
- * `message.usage` object (any token-bearing LLM round-trip), returning its
- * epoch-ms timestamp. Returns undefined when no such line exists. Lines with
- * no usable timestamp are skipped (never treated as "now").
- */
-export function lastTokenFlowAt(rawLines: string[]): number | undefined {
-  let latest: number | undefined;
-  for (const line of rawLines) {
-    if (!line.trim()) continue;
-    let data: RawTranscriptLine;
-    try {
-      data = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (data.type !== "assistant") continue;
-    if (!data.message?.usage) continue;
-    const rawTs = data.timestamp;
-    const ts = typeof rawTs === "number" ? rawTs : rawTs ? new Date(rawTs).getTime() : undefined;
-    if (ts === undefined || Number.isNaN(ts)) continue;
-    if (latest === undefined || ts > latest) latest = ts;
-  }
-  return latest;
 }

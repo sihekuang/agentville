@@ -5,8 +5,9 @@ import type { AgentProvider } from "./provider";
 import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
 import type { TranscriptEntry } from "../transcript";
-import { discoverSessions, getTranscriptPath } from "../sessions";
-import { parseTranscriptLine, currentActionFromTranscript, lastTokenFlowAt } from "../transcript";
+import { discoverSessions, getTranscriptPath, getSessionDir, escapeCwd } from "../sessions";
+import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
+import { newestMtime } from "../activity-mtime";
 import { resolveHostApp } from "../host-app";
 
 const MAX_RECENT_ACTIONS = 20;
@@ -90,7 +91,6 @@ export class ClaudeCodeProvider implements AgentProvider {
     );
 
     let recentTranscript: TranscriptEntry[] = [];
-    let lastTokenActivityAt: number | undefined;
     if (transcriptPath) {
       try {
         const raw = fs.readFileSync(transcriptPath, "utf-8");
@@ -101,11 +101,25 @@ export class ClaudeCodeProvider implements AgentProvider {
           if (entry) allEntries.push(entry);
         }
         recentTranscript = allEntries.slice(-MAX_RECENT_ACTIONS);
-        lastTokenActivityAt = lastTokenFlowAt(lines);
       } catch (err) {
         console.warn(`[agentville] failed to read transcript for ${session.sessionId.slice(0, 8)}:`, (err as Error).message);
       }
     }
+
+    // Activity signal = freshest mtime across the transcript and the session's
+    // subagent/tool-result files. These are written as work happens, so this is
+    // much fresher than parsing per-turn token-usage timestamps.
+    const sessionDir = getSessionDir(this.projectsDir, session.cwd, session.sessionId);
+    const transcriptFile = path.join(
+      this.projectsDir,
+      escapeCwd(session.cwd),
+      `${session.sessionId}.jsonl`
+    );
+    const lastTokenActivityAt = newestMtime([
+      transcriptFile,
+      path.join(sessionDir, "subagents"),
+      path.join(sessionDir, "tool-results"),
+    ]);
 
     const currentAction: NormalizedAction =
       session.status === "waiting"

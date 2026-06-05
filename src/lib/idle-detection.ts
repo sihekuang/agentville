@@ -1,7 +1,11 @@
 import type { Agent } from "./providers/types";
 
-/** Default window with no token flow before an agent is marked "stalled". */
-export const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
+/**
+ * Default window with no file activity before an agent is marked "stalled".
+ * Conservative because the signal (transcript/rollout file mtime) still lags
+ * during an in-progress turn — see activity-mtime.ts.
+ */
+export const DEFAULT_IDLE_TIMEOUT_MS = 300_000;
 
 const MIN_IDLE_TIMEOUT_MS = 5_000;
 const MAX_IDLE_TIMEOUT_MS = 3_600_000;
@@ -21,13 +25,13 @@ export function parseIdleTimeoutParam(raw: string | null): number {
 }
 
 /**
- * Force a provider-"busy" agent to "stalled" when no token-bearing LLM
- * round-trip has occurred for `timeoutMs`. Pure: returns the SAME agent
- * reference when nothing changes, or a new object when overridden.
+ * Force a provider-"busy" agent to "stalled" when there has been no file
+ * activity (`lastTokenActivityAt`) for `timeoutMs`. Pure: returns the SAME
+ * agent reference when nothing changes, or a new object when overridden.
  *
  * - Only "busy" agents are affected (normal idle/waiting are left alone).
  * - A "waiting for input" agent (currentAction === "waiting") is preserved.
- * - If the token-flow signal is unknown, the agent is left untouched (fail-safe).
+ * - If the activity signal is unknown, the agent is left untouched (fail-safe).
  */
 export function applyIdleOverride(agent: Agent, now: number, timeoutMs: number): Agent {
   if (agent.status !== "busy") return agent;

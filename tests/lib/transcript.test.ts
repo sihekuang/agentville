@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTranscriptLine, parseTranscriptFile, currentActionFromTranscript, lastTokenFlowAt } from "@/lib/transcript";
+import { parseTranscriptLine, parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcript";
 import type { NormalizedAction } from "@/lib/providers/types";
 import path from "path";
 
@@ -170,40 +170,5 @@ describe("currentActionFromTranscript", () => {
       { timestamp: 3, type: "tool_use", summary: "Bash: npm test" },
     ]);
     expect(action).toBe("executing");
-  });
-});
-
-describe("lastTokenFlowAt", () => {
-  it("returns the newest timestamp among assistant lines carrying usage", () => {
-    const lines = [
-      JSON.stringify({ type: "assistant", message: { role: "assistant", usage: { output_tokens: 5 } }, timestamp: 1000 }),
-      JSON.stringify({ type: "assistant", message: { role: "assistant", usage: { output_tokens: 2 } }, timestamp: 3000 }),
-      JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "hi" }] }, timestamp: 5000 }),
-    ];
-    expect(lastTokenFlowAt(lines)).toBe(3000);
-  });
-
-  it("counts an empty usage object (presence, not token count)", () => {
-    const lines = [JSON.stringify({ type: "assistant", message: { role: "assistant", usage: {} }, timestamp: 4200 })];
-    expect(lastTokenFlowAt(lines)).toBe(4200);
-  });
-
-  it("coerces ISO timestamps", () => {
-    const iso = "2026-05-24T17:14:55.006Z";
-    const lines = [JSON.stringify({ type: "assistant", message: { role: "assistant", usage: {} }, timestamp: iso })];
-    expect(lastTokenFlowAt(lines)).toBe(new Date(iso).getTime());
-  });
-
-  it("returns undefined when no usage-bearing lines exist", () => {
-    const lines = [
-      JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "hi" }] }, timestamp: 1000 }),
-      JSON.stringify({ type: "user", message: { role: "user" }, timestamp: 2000 }),
-    ];
-    expect(lastTokenFlowAt(lines)).toBeUndefined();
-  });
-
-  it("ignores malformed and blank lines", () => {
-    const lines = ["not json", "", JSON.stringify({ type: "assistant", message: { role: "assistant", usage: {} }, timestamp: 7000 })];
-    expect(lastTokenFlowAt(lines)).toBe(7000);
   });
 });

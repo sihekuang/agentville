@@ -68,13 +68,10 @@ export class CodexProvider implements AgentProvider {
     const entries: CodexEntry[] = parseCodexRollout(raw);
     const recent = entries.slice(-MAX_RECENT_ACTIONS);
 
-    let lastTokenActivityAt: number | undefined;
-    for (const e of entries) {
-      if (lastTokenActivityAt === undefined || e.timestamp > lastTokenActivityAt) {
-        lastTokenActivityAt = e.timestamp;
-      }
-    }
-    if (lastTokenActivityAt === undefined) lastTokenActivityAt = mtimeMs;
+    // Activity signal = rollout file mtime. Codex writes its rollout
+    // incrementally as the model streams, so the file mtime is a real-time
+    // signal — the uniform file-mtime approach shared with the Claude provider.
+    const lastTokenActivityAt = mtimeMs;
 
     const currentAction: NormalizedAction = recent.length > 0
       ? normalizeCodexAction(recent[recent.length - 1])
