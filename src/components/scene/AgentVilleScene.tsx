@@ -10,7 +10,7 @@ import { usePip } from "@/hooks/usePip";
 import { useLoadTexture } from "./use-animation-frames";
 import { Tilemap } from "./Tilemap";
 import { AgentSprite } from "./AgentSprite";
-import { isLongRunningTool } from "@/lib/long-running";
+import { isLongRunningState } from "@/lib/long-running";
 import { officeTheme } from "./themes/office";
 import { farmTheme } from "./themes/farm";
 import { workshopTheme } from "./themes/workshop";
@@ -164,7 +164,7 @@ function SceneContent({
         {agentList.map((agent, index) => {
           const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
           // Evaluated per stream update, so the ⏳ appears within one poll cycle.
-          const longRunning = isLongRunningTool(agent, Date.now());
+          const longRunning = isLongRunningState(agent, Date.now());
           return (
             <AgentSprite
               key={agent.id}

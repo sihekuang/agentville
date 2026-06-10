@@ -18,7 +18,7 @@ interface AgentSpriteProps {
   hostAppName?: string | null;
   currentAction: NormalizedAction;
   status: string;
-  /** Appends ⏳ to the emote — the current shell/tool call has been running a while. */
+  /** Appends ⏳ to the emote — the agent has been in its current state a while. */
   isLongRunning?: boolean;
   animConfig: AgentAnimationConfig;
   baseTexture: Texture | null;
