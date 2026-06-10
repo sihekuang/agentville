@@ -23,6 +23,7 @@ export const ACTIVITY_LEGEND: { emoji: string; label: string }[] = [
   { emoji: "🤖", label: "Delegating to sub-agents" },
   { emoji: "❓", label: "Waiting for your input" },
   { emoji: "🔧", label: "Using other tools" },
+  { emoji: "⏳", label: "Long-running (>1 min)" },
   { emoji: "💤", label: "Idle (zzz)" },
 ];
 

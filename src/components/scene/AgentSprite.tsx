@@ -18,6 +18,8 @@ interface AgentSpriteProps {
   hostAppName?: string | null;
   currentAction: NormalizedAction;
   status: string;
+  /** Appends ⏳ to the emote — the current shell/tool call has been running a while. */
+  isLongRunning?: boolean;
   animConfig: AgentAnimationConfig;
   baseTexture: Texture | null;
   onClick: (id: string) => void;
@@ -116,6 +118,7 @@ export function AgentSprite({
   hostAppName,
   currentAction,
   status,
+  isLongRunning,
   animConfig,
   baseTexture,
   onClick,
@@ -288,7 +291,8 @@ export function AgentSprite({
   const baseY = animConfig.frameHeight / 2;
   const providerY = hostName ? baseY + 20 : baseY + 14;
   const tint = renderStatus === "busy" ? 0xffffff : styles.idleTint;
-  const emote = formatAction(currentAction);
+  const baseEmote = formatAction(currentAction);
+  const emote = baseEmote && isLongRunning ? `${baseEmote}\u{23F3}` : baseEmote; // ⏳
 
   return (
     <pixiContainer
