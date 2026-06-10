@@ -1,6 +1,6 @@
 {
   "name": "agentville",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Real-time visualization dashboard for AI coding agents",
   "author": "Daniel Lee",
   "license": "MIT",
