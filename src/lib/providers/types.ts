@@ -35,9 +35,11 @@ export interface Agent {
   provider: string;
   pid: number;
   cwd: string;
-  status: "busy" | "idle" | "waiting";
+  status: "busy" | "idle" | "waiting" | "stalled";
   startedAt: number;
   currentAction: NormalizedAction;
+  /** Epoch ms of the most recent token-bearing LLM round-trip; undefined = unknown. */
+  lastTokenActivityAt?: number;
   recentActivity: ActivityEntry[];
   hostApp: HostApp | null;
   subagents: Agent[];

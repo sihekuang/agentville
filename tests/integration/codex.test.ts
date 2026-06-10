@@ -34,6 +34,7 @@ describe("CodexProvider (integration)", () => {
     expect(a.pid).toBe(78905);
     expect(a.cwd).toBe("/Users/test/proj");
     expect(a.recentActivity.length).toBeGreaterThan(0);
+    expect(typeof a.lastTokenActivityAt).toBe("number");
     // Last assistant message dominates currentAction
     expect(a.currentAction).toBe("writing");
     expect(["busy", "idle", "waiting"]).toContain(a.status);

@@ -5,8 +5,9 @@ import type { AgentProvider } from "./provider";
 import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
 import type { TranscriptEntry } from "../transcript";
-import { discoverSessions, getTranscriptPath } from "../sessions";
+import { discoverSessions, getTranscriptPath, getSessionDir, escapeCwd } from "../sessions";
 import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
+import { newestMtime } from "../activity-mtime";
 import { resolveHostApp } from "../host-app";
 
 const MAX_RECENT_ACTIONS = 20;
@@ -105,6 +106,21 @@ export class ClaudeCodeProvider implements AgentProvider {
       }
     }
 
+    // Activity signal = freshest mtime across the transcript and the session's
+    // subagent/tool-result files. These are written as work happens, so this is
+    // much fresher than parsing per-turn token-usage timestamps.
+    const sessionDir = getSessionDir(this.projectsDir, session.cwd, session.sessionId);
+    const transcriptFile = path.join(
+      this.projectsDir,
+      escapeCwd(session.cwd),
+      `${session.sessionId}.jsonl`
+    );
+    const lastTokenActivityAt = newestMtime([
+      transcriptFile,
+      path.join(sessionDir, "subagents"),
+      path.join(sessionDir, "tool-results"),
+    ]);
+
     const currentAction: NormalizedAction =
       session.status === "waiting"
         ? "waiting"
@@ -123,10 +139,16 @@ export class ClaudeCodeProvider implements AgentProvider {
       provider: this.name,
       pid: session.pid,
       cwd: session.cwd,
-      status: session.status === "waiting" ? "busy" : session.status,
+      // Claude Code can report non-canonical statuses (e.g. "shell") that aren't
+      // in the Agent vocabulary. Collapse anything that isn't "idle" to the
+      // canonical "busy" so downstream consumers agree: the idle override (which
+      // only acts on "busy") and the scene (which paints non-idle as working).
+      // "waiting" → "busy" keeps the active look; currentAction preserves "waiting".
+      status: session.status === "idle" ? "idle" : "busy",
       startedAt: session.startedAt,
       currentAction,
       recentActivity: recentTranscript.map(toActivityEntry),
+      lastTokenActivityAt,
       hostApp,
       subagents: [],
       metadata: {

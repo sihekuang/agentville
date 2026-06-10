@@ -85,6 +85,17 @@ function makeStyles(isDark: boolean) {
       fill: isDark ? 0xffff00 : 0xcc8800,
       fontFamily: "sans-serif",
     }),
+    stalledMark: new TextStyle({
+      fontSize: 8 * TEXT_RES,
+      fill: 0xd9a441,
+      fontFamily: "sans-serif",
+    }),
+    stalledLabel: new TextStyle({
+      fontSize: 5 * TEXT_RES,
+      fill: 0xd9a441,
+      fontFamily: "monospace",
+      align: "center",
+    }),
     idleTint: isDark ? 0x888888 : 0xaaaaaa,
   };
 }
@@ -140,7 +151,9 @@ export function AgentSprite({
   // Normalize status: anything that isn't "idle" is treated as "busy"
   // for rendering. The session file can report statuses like "shell"
   // that aren't in the original type definition.
-  const renderStatus = status === "idle" ? "idle" : "busy";
+  const isStalled = status === "stalled";
+  // "stalled" renders on the idle (sleeping) base, but with a distinct marker.
+  const renderStatus = status === "idle" || isStalled ? "idle" : "busy";
 
   const { textures, speed } = useAnimationFrames(baseTexture, animConfig, currentAction, renderStatus);
 
@@ -426,7 +439,7 @@ export function AgentSprite({
       )}
       <pixiText
         text={label}
-        style={isSelected ? styles.selectedLabel : styles.label}
+        style={isStalled ? styles.stalledLabel : isSelected ? styles.selectedLabel : styles.label}
         anchor={0.5}
         scale={1 / TEXT_RES}
         y={providerY}
@@ -442,7 +455,7 @@ export function AgentSprite({
           alpha={1}
         />
       )}
-      {renderStatus === "idle" && (
+      {renderStatus === "idle" && !isStalled && (
         <>
           <pixiText
             ref={zzzRefs[0]}
@@ -475,6 +488,16 @@ export function AgentSprite({
             alpha={0.2}
           />
         </>
+      )}
+      {isStalled && (
+        <pixiText
+          text={"⏸"}
+          style={styles.stalledMark}
+          anchor={0.5}
+          scale={1 / TEXT_RES}
+          x={16}
+          y={-18}
+        />
       )}
       {isSelected && (
         <>
