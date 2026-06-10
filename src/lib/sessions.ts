@@ -6,7 +6,8 @@ export interface DiscoveredSession {
   pid: number;
   sessionId: string;
   cwd: string;
-  status: "busy" | "idle" | "waiting";
+  /** "shell" = Claude Code is executing a shell command right now. */
+  status: "busy" | "idle" | "waiting" | "shell";
   startedAt: number;
   updatedAt: number;
   entrypoint: string;

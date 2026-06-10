@@ -5,6 +5,65 @@ export interface TranscriptEntry {
   timestamp: number;
   type: "tool_use" | "thinking" | "text" | "subagent_start" | "subagent_stop";
   summary: string;
+  /** Exact tool name for tool_use entries (e.g. "Read", "mcp__server__tool"). */
+  toolName?: string;
+}
+
+/**
+ * Map a Claude Code tool name to a NormalizedAction.
+ * Covers the full built-in tool set (per the official tools reference),
+ * including legacy names still emitted by older CLI versions
+ * (Task, MultiEdit, TodoWrite, KillShell). Unknown tools — including
+ * mcp__* server tools — fall through to "other".
+ */
+const CLAUDE_TOOL_ACTIONS: Record<string, NormalizedAction> = {
+  // reading / searching
+  Read: "reading",
+  Glob: "reading",
+  Grep: "reading",
+  WebFetch: "reading",
+  WebSearch: "reading",
+  LSP: "reading",
+  ToolSearch: "reading",
+  ListMcpResourcesTool: "reading",
+  ReadMcpResourceTool: "reading",
+  TaskGet: "reading",
+  TaskList: "reading",
+  NotebookRead: "reading",
+  // editing
+  Edit: "editing",
+  Write: "editing",
+  MultiEdit: "editing",
+  NotebookEdit: "editing",
+  // executing
+  Bash: "executing",
+  BashOutput: "executing",
+  KillShell: "executing",
+  PowerShell: "executing",
+  Monitor: "executing",
+  Skill: "executing",
+  SlashCommand: "executing",
+  TaskStop: "executing",
+  TaskOutput: "executing",
+  // delegating
+  Agent: "delegating",
+  Task: "delegating",
+  Workflow: "delegating",
+  SendMessage: "delegating",
+  TeamCreate: "delegating",
+  TeamDelete: "delegating",
+  // blocked on the user
+  AskUserQuestion: "waiting",
+  ExitPlanMode: "waiting",
+  // planning
+  TodoWrite: "thinking",
+  TaskCreate: "thinking",
+  TaskUpdate: "thinking",
+  EnterPlanMode: "thinking",
+};
+
+export function actionForClaudeTool(toolName: string): NormalizedAction {
+  return CLAUDE_TOOL_ACTIONS[toolName] ?? "other";
 }
 
 interface RawTranscriptLine {
@@ -40,14 +99,20 @@ export function parseTranscriptLine(line: string): TranscriptEntry | null {
   const content = data.message?.content;
   if (!Array.isArray(content) || content.length === 0) return null;
 
-  const block = content[0];
+  // A line can carry several blocks (e.g. [thinking, text, tool_use]).
+  // The tool_use block is the action actually in flight, so it wins;
+  // a text block beats a bare thinking block.
+  const block =
+    content.filter((b) => b.type === "tool_use").pop() ??
+    content.find((b) => b.type === "text" && b.text) ??
+    content[0];
   const rawTs = data.timestamp;
   const timestamp = typeof rawTs === "number" ? rawTs : rawTs ? new Date(rawTs).getTime() : Date.now();
 
   if (block.type === "tool_use") {
     const toolName = block.name ?? "unknown";
     const summary = formatToolSummary(toolName, block.input);
-    return { timestamp, type: "tool_use", summary };
+    return { timestamp, type: "tool_use", summary, toolName };
   }
 
   if (block.type === "thinking") {
@@ -103,18 +168,15 @@ export function currentActionFromTranscript(
   if (last.type === "text") return "writing";
 
   if (last.type === "tool_use") {
-    const toolName = last.summary.split(" ")[0].split(":")[0];
-    switch (toolName) {
-      case "Read": return "reading";
-      case "Edit":
-      case "Write": return "editing";
-      case "Bash": return "executing";
-      case "Agent": return "delegating";
-      default: return "other";
-    }
+    return actionForClaudeTool(toolNameOf(last));
   }
 
   return "idle";
+}
+
+/** Tool name of a tool_use entry, falling back to parsing the summary. */
+export function toolNameOf(entry: TranscriptEntry): string {
+  return entry.toolName ?? entry.summary.split(" ")[0].split(":")[0];
 }
 
 export function parseTranscriptFile(filePath: string): TranscriptEntry[] {

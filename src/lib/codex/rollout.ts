@@ -38,6 +38,8 @@ interface RawLine {
     role?: string;
     content?: Array<{ type?: string; text?: string }>;
     summary?: Array<{ type?: string; text?: string }>;
+    /** local_shell_call / web_search_call payloads carry their args here */
+    action?: { type?: string; command?: string[]; query?: string };
   };
 }
 
@@ -59,10 +61,10 @@ export function parseCodexRolloutLine(line: string): CodexEntry | null {
   if (!p) return null;
   const timestamp = ts(raw.timestamp);
 
-  if (p.type === "function_call") {
+  if (p.type === "function_call" || p.type === "custom_tool_call") {
     const name = p.name ?? "";
     let cmd: string | undefined;
-    if (name === "exec_command" || name === "shell") {
+    if (name === "exec_command" || name === "shell" || name === "unified_exec") {
       try {
         const args = JSON.parse(p.arguments ?? "{}");
         if (typeof args.cmd === "string") {
@@ -70,11 +72,29 @@ export function parseCodexRolloutLine(line: string): CodexEntry | null {
         } else if (Array.isArray(args.command)) {
           const arr = args.command as string[];
           cmd = arr[arr.length - 1] ?? "";
+        } else if (Array.isArray(args.input)) {
+          const arr = args.input as string[];
+          cmd = arr[arr.length - 1] ?? "";
         }
       } catch { /* leave cmd undefined */ }
     }
     const summary = cmd ? truncate(`$ ${cmd}`) : name;
     return { timestamp, kind: "function_call", name, cmd, summary };
+  }
+
+  // Shell exec delivered as a dedicated item type (some models) rather than
+  // a function_call. Normalize to the same function_call shape.
+  if (p.type === "local_shell_call") {
+    const arr = p.action?.command ?? [];
+    const cmd = arr.length > 0 ? arr[arr.length - 1] : undefined;
+    const summary = cmd ? truncate(`$ ${cmd}`) : "local_shell_call";
+    return { timestamp, kind: "function_call", name: "shell", cmd, summary };
+  }
+
+  if (p.type === "web_search_call") {
+    const query = p.action?.query;
+    const summary = query ? truncate(`Web search: ${query}`) : "Web search";
+    return { timestamp, kind: "function_call", name: "web_search", summary };
   }
 
   if (p.type === "reasoning") {
@@ -108,13 +128,31 @@ export function normalizeCodexAction(e: CodexEntry): NormalizedAction {
   switch (e.name) {
     case "exec_command":
     case "shell":
+    case "unified_exec":
       return e.cmd ? classifyCommand(e.cmd) : "executing";
     case "write_stdin":
       return "executing";
     case "apply_patch":
     case "patch":
       return "editing";
+    case "view_image":
+    case "web_search":
+      return "reading";
+    case "request_user_input":
+      return "waiting";
+    // planning — consistent with Claude's TaskCreate/TaskUpdate → thinking
     case "update_plan":
+      return "thinking";
+    // multi-agent orchestration tools
+    case "spawn_agent":
+    case "send_input":
+    case "send_message":
+    case "followup_task":
+    case "resume_agent":
+    case "wait_agent":
+    case "list_agents":
+    case "close_agent":
+    case "interrupt_agent":
       return "delegating";
     default:
       return "other";

@@ -11,7 +11,7 @@ export interface RawSessionFile {
   peerProtocol: number;
   kind: string;
   entrypoint: string;
-  status: "busy" | "idle" | "waiting";
+  status: "busy" | "idle" | "waiting" | "shell";
   updatedAt: number;
   waitingFor?: string;
 }

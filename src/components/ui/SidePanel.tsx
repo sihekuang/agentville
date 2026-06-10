@@ -88,7 +88,7 @@ export function SidePanel() {
             <option value={0}>Off</option>
           </select>
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-            Mark an agent &ldquo;stalled&rdquo; after this long with no token activity, even if it still reports busy.
+            Treat an agent as idle after this long with no activity, even if it still reports busy.
           </p>
         </div>
       </div>
@@ -134,19 +134,7 @@ export function SidePanel() {
             x
           </button>
         </div>
-        <StatusBadge
-          status={agent.status}
-          title={
-            agent.status === "stalled"
-              ? `No token activity for ${Math.round(idleTimeoutMs / 1000)}s — auto-idled`
-              : undefined
-          }
-        />
-        {agent.status === "stalled" && (
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-            No token activity for {Math.round(idleTimeoutMs / 1000)}s — auto-idled.
-          </p>
-        )}
+        <StatusBadge status={agent.status} />
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">

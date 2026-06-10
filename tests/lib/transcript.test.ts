@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseTranscriptLine, parseTranscriptFile, currentActionFromTranscript } from "@/lib/transcript";
+import {
+  parseTranscriptLine,
+  parseTranscriptFile,
+  currentActionFromTranscript,
+  actionForClaudeTool,
+} from "@/lib/transcript";
 import type { NormalizedAction } from "@/lib/providers/types";
 import path from "path";
 
@@ -30,7 +35,54 @@ describe("parseTranscriptLine", () => {
       timestamp: 1700000012000,
       type: "tool_use",
       summary: "Read /src/app.ts",
+      toolName: "Read",
     });
+  });
+
+  it("prefers the tool_use block when a line has multiple content blocks", () => {
+    const line = JSON.stringify({
+      type: "assistant",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "Let me check..." },
+          { type: "text", text: "Checking the file now." },
+          {
+            type: "tool_use",
+            id: "t9",
+            name: "Bash",
+            input: { command: "npm test" },
+          },
+        ],
+      },
+      sessionId: "abc-123",
+      uuid: "u9",
+      timestamp: 1700000020000,
+    });
+
+    const result = parseTranscriptLine(line);
+    expect(result?.type).toBe("tool_use");
+    expect(result?.toolName).toBe("Bash");
+  });
+
+  it("falls back to the text block when a multi-block line has no tool_use", () => {
+    const line = JSON.stringify({
+      type: "assistant",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "Hmm..." },
+          { type: "text", text: "Here is my answer." },
+        ],
+      },
+      sessionId: "abc-123",
+      uuid: "u10",
+      timestamp: 1700000021000,
+    });
+
+    const result = parseTranscriptLine(line);
+    expect(result?.type).toBe("text");
+    expect(result?.summary).toBe("Here is my answer.");
   });
 
   it("parses a thinking line into a TranscriptEntry", () => {
@@ -158,9 +210,21 @@ describe("currentActionFromTranscript", () => {
 
   it("returns 'other' for unrecognized tool_use entry", () => {
     const action: NormalizedAction = currentActionFromTranscript([
-      { timestamp: 1, type: "tool_use", summary: "WebSearch something" },
+      { timestamp: 1, type: "tool_use", summary: "SomeFutureTool input" },
     ]);
     expect(action).toBe("other");
+  });
+
+  it("uses the entry's toolName when present", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      {
+        timestamp: 1,
+        type: "tool_use",
+        summary: "Asking about deploy strategy",
+        toolName: "AskUserQuestion",
+      },
+    ]);
+    expect(action).toBe("waiting");
   });
 
   it("uses the last entry when multiple entries are present", () => {
@@ -170,5 +234,60 @@ describe("currentActionFromTranscript", () => {
       { timestamp: 3, type: "tool_use", summary: "Bash: npm test" },
     ]);
     expect(action).toBe("executing");
+  });
+});
+
+describe("actionForClaudeTool", () => {
+  const cases: Array<[string, NormalizedAction]> = [
+    // reading / searching
+    ["Read", "reading"],
+    ["Glob", "reading"],
+    ["Grep", "reading"],
+    ["WebFetch", "reading"],
+    ["WebSearch", "reading"],
+    ["LSP", "reading"],
+    ["ToolSearch", "reading"],
+    ["ListMcpResourcesTool", "reading"],
+    ["ReadMcpResourceTool", "reading"],
+    ["TaskGet", "reading"],
+    ["TaskList", "reading"],
+    ["NotebookRead", "reading"],
+    // editing
+    ["Edit", "editing"],
+    ["Write", "editing"],
+    ["MultiEdit", "editing"],
+    ["NotebookEdit", "editing"],
+    // executing
+    ["Bash", "executing"],
+    ["BashOutput", "executing"],
+    ["KillShell", "executing"],
+    ["PowerShell", "executing"],
+    ["Monitor", "executing"],
+    ["Skill", "executing"],
+    ["SlashCommand", "executing"],
+    ["TaskStop", "executing"],
+    ["TaskOutput", "executing"],
+    // delegating
+    ["Agent", "delegating"],
+    ["Task", "delegating"], // legacy name of the Agent tool
+    ["Workflow", "delegating"],
+    ["SendMessage", "delegating"],
+    ["TeamCreate", "delegating"],
+    ["TeamDelete", "delegating"],
+    // waiting on the user
+    ["AskUserQuestion", "waiting"],
+    ["ExitPlanMode", "waiting"],
+    // planning
+    ["TodoWrite", "thinking"],
+    ["TaskCreate", "thinking"],
+    ["TaskUpdate", "thinking"],
+    ["EnterPlanMode", "thinking"],
+    // catch-all
+    ["mcp__BrowserOS__take_screenshot", "other"],
+    ["SomeFutureTool", "other"],
+  ];
+
+  it.each(cases)("maps %s to %s", (tool, expected) => {
+    expect(actionForClaudeTool(tool)).toBe(expected);
   });
 });

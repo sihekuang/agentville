@@ -34,13 +34,18 @@ describe("ClaudeCodeProvider status normalization", () => {
     fs.rmSync(home, { recursive: true, force: true });
   });
 
-  it("normalizes a non-canonical 'shell' status to busy (so it can later stall)", async () => {
-    // Claude Code writes statuses like "shell" that aren't in the canonical
-    // vocabulary. They must collapse to "busy" so applyIdleOverride can act on
-    // them and the scene doesn't paint a quiet shell session as "working" forever.
+  it("treats 'shell' as busy + executing with a current activity signal", async () => {
+    // Claude Code's session heartbeat reports "shell" while a command is
+    // running. That is an authoritative "work in flight right now" signal:
+    // the agent renders busy/executing and its activity timestamp is current,
+    // so the idle override never demotes a session mid-command.
+    const before = Date.now();
     writeSession("s-shell", "shell", "/Users/test/shellproj");
     const agents = await new ClaudeCodeProvider(home).discoverAgents();
-    expect(agents.find((a) => a.id === "claude-code:s-shell")?.status).toBe("busy");
+    const agent = agents.find((a) => a.id === "claude-code:s-shell");
+    expect(agent?.status).toBe("busy");
+    expect(agent?.currentAction).toBe("executing");
+    expect(agent?.lastTokenActivityAt).toBeGreaterThanOrEqual(before);
   });
 
   it("keeps idle as idle and maps waiting to busy", async () => {

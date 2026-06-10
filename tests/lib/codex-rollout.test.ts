@@ -58,8 +58,32 @@ describe("normalizeCodexAction", () => {
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "apply_patch" })).toBe("editing");
   });
 
-  it("maps update_plan to delegating", () => {
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "update_plan" })).toBe("delegating");
+  it("maps update_plan to thinking (planning, consistent with Claude's TaskCreate/TaskUpdate)", () => {
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "update_plan" })).toBe("thinking");
+  });
+
+  it("maps unified_exec by classifying its cmd", () => {
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec", cmd: "cat foo.ts" })).toBe("reading");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec", cmd: "npm test" })).toBe("executing");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec" })).toBe("executing");
+  });
+
+  it("maps view_image and web_search to reading", () => {
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "view_image" })).toBe("reading");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "web_search" })).toBe("reading");
+  });
+
+  it("maps request_user_input to waiting", () => {
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "request_user_input" })).toBe("waiting");
+  });
+
+  it("maps multi-agent tools to delegating", () => {
+    for (const name of [
+      "spawn_agent", "send_input", "send_message", "followup_task",
+      "resume_agent", "wait_agent", "list_agents", "close_agent", "interrupt_agent",
+    ]) {
+      expect(normalizeCodexAction({ ...base, kind: "function_call", name })).toBe("delegating");
+    }
   });
 
   it("maps reasoning to thinking", () => {
@@ -127,6 +151,40 @@ describe("parseCodexRolloutLine", () => {
     expect(e.summary).toBe("Thinking");
   });
 
+  it("parses custom_tool_call apply_patch (how Codex actually delivers edits)", () => {
+    const e = parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-06-01T00:00:00Z", type: "response_item",
+      payload: { type: "custom_tool_call", name: "apply_patch",
+                 input: "*** Begin Patch\n*** Update File: src/x.ts\n*** End Patch", call_id: "c3" }
+    }))!;
+    expect(e).not.toBeNull();
+    expect(e.kind).toBe("function_call");
+    expect((e as any).name).toBe("apply_patch");
+    expect(normalizeCodexAction(e)).toBe("editing");
+  });
+
+  it("parses local_shell_call and classifies its command", () => {
+    const e = parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-06-01T00:00:00Z", type: "response_item",
+      payload: { type: "local_shell_call", status: "completed", call_id: "c4",
+                 action: { type: "exec", command: ["bash", "-lc", "cat README.md"] } }
+    }))!;
+    expect(e).not.toBeNull();
+    expect((e as any).cmd).toBe("cat README.md");
+    expect(normalizeCodexAction(e)).toBe("reading");
+  });
+
+  it("parses web_search_call into a reading action with the query", () => {
+    const e = parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-06-01T00:00:00Z", type: "response_item",
+      payload: { type: "web_search_call", status: "completed",
+                 action: { type: "search", query: "vitest mock fs" } }
+    }))!;
+    expect(e).not.toBeNull();
+    expect(e.summary).toContain("vitest mock fs");
+    expect(normalizeCodexAction(e)).toBe("reading");
+  });
+
   it("parses assistant message and truncates long text", () => {
     const longText = "x".repeat(200);
     const e = parseCodexRolloutLine(JSON.stringify({
@@ -154,7 +212,7 @@ describe("parseCodexRollout (against fixtures)", () => {
       "executing",  // exec_command: npm test
       "editing",    // exec_command: apply_patch
       "executing",  // write_stdin
-      "delegating", // update_plan
+      "thinking",   // update_plan (planning)
       "writing",    // assistant message
     ]);
   });

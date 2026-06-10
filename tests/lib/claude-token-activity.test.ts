@@ -54,4 +54,19 @@ describe("ClaudeCodeProvider lastTokenActivityAt (file-mtime signal)", () => {
     const agent = agents.find((a) => a.id === `claude-code:${sessionId}`);
     expect(agent!.lastTokenActivityAt).toBe(fs.statSync(subFile).mtimeMs);
   });
+
+  it("picks up fresher activity from background task output files", async () => {
+    setMtime(transcriptFile, 1_700_000_100_000);
+    // Background task output streams to <tasksBase>/<escaped-cwd>/<sessionId>/tasks/
+    const tasksBase = path.join(home, "tmp-tasks");
+    const tasksDir = path.join(tasksBase, escaped, sessionId, "tasks");
+    fs.mkdirSync(tasksDir, { recursive: true });
+    const outFile = path.join(tasksDir, "bg-1.output");
+    fs.writeFileSync(outFile, "building...");
+    setMtime(outFile, 1_700_000_800_000); // newer than the main transcript
+
+    const agents = await new ClaudeCodeProvider(home, { tasksBaseDir: tasksBase }).discoverAgents();
+    const agent = agents.find((a) => a.id === `claude-code:${sessionId}`);
+    expect(agent!.lastTokenActivityAt).toBe(fs.statSync(outFile).mtimeMs);
+  });
 });

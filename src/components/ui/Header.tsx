@@ -15,14 +15,15 @@ const THEME_OPTIONS: { value: Theme; label: string }[] = [
 ];
 
 export const ACTIVITY_LEGEND: { emoji: string; label: string }[] = [
-  { emoji: "💭", label: "Thinking" },
-  { emoji: "💬", label: "Writing" },
-  { emoji: "📖", label: "Reading files" },
+  { emoji: "💭", label: "Thinking / planning" },
+  { emoji: "💬", label: "Writing a response" },
+  { emoji: "📖", label: "Reading & searching" },
   { emoji: "✏️", label: "Editing files" },
-  { emoji: "📝", label: "Writing files" },
   { emoji: "⚡", label: "Running commands" },
-  { emoji: "🤖", label: "Spawning sub-agent" },
+  { emoji: "🤖", label: "Delegating to sub-agents" },
+  { emoji: "❓", label: "Waiting for your input" },
   { emoji: "🔧", label: "Using other tools" },
+  { emoji: "⏳", label: "Long-running (>1 min)" },
   { emoji: "💤", label: "Idle (zzz)" },
 ];
 
@@ -34,7 +35,6 @@ export function Header() {
   const agentList = Object.values(agents);
   const busyCount = agentList.filter((a) => a.status === "busy").length;
   const idleCount = agentList.filter((a) => a.status === "idle").length;
-  const stalledCount = agentList.filter((a) => a.status === "stalled").length;
 
   return (
     <header className="titlebar-drag flex items-center justify-between pl-24 pr-4 py-2 bg-card border-b border-border">
@@ -46,9 +46,6 @@ export function Header() {
           <span>{agentList.length} agents</span>
           <span className="text-green-500 dark:text-green-400">{busyCount} busy</span>
           <span className="text-muted-foreground">{idleCount} idle</span>
-          {stalledCount > 0 && (
-            <span className="text-amber-600 dark:text-amber-400">{stalledCount} stalled</span>
-          )}
         </div>
         <Popover>
           <PopoverTrigger
