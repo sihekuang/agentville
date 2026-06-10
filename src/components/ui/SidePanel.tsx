@@ -66,10 +66,6 @@ export function SidePanel() {
               <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground" />
               Idle (dimmed)
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
-              Stalled (auto-idle)
-            </span>
           </div>
         </div>
         <div className="p-4 border-t border-border">
