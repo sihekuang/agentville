@@ -70,9 +70,13 @@ export async function discoverSessions(
   return sessions;
 }
 
-/** Claude Code encodes a session's cwd into its projects/ dir name. */
+/**
+ * Claude Code encodes a session's cwd into its projects/ dir name by replacing
+ * every non-alphanumeric character (not just "/" and ".") with "-":
+ * /Users/x/spain_trip_2026 → -Users-x-spain-trip-2026
+ */
 export function escapeCwd(cwd: string): string {
-  return cwd.replace(/[/.]/g, "-");
+  return cwd.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
 export function getTranscriptPath(
