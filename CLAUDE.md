@@ -2,6 +2,8 @@
 
 # AgentVille
 
+**The product must work for BOTH Claude Code and Codex.** See "Architecture principles" in `AGENTS.md` — every provider-facing change (discovery, parsing, action normalization, scene) must be verified against both providers, with tests on both sides.
+
 ## Styling: shadcn/ui + Tailwind CSS
 
 This project uses **shadcn/ui** with **Tailwind CSS 4**. Follow these rules strictly:

@@ -79,7 +79,7 @@ describe("integration: full pipeline", () => {
       provider: "claude-code",
       pid: sessions[0].pid,
       cwd: sessions[0].cwd,
-      status: sessions[0].status,
+      status: sessions[0].status === "idle" ? "idle" : "busy",
       currentAction: action,
       recentActivity: entries.slice(-20).map((e) => ({
         timestamp: e.timestamp,

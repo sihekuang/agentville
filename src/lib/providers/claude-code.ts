@@ -6,7 +6,12 @@ import type { Agent, NormalizedAction, ActivityEntry } from "./types";
 import { makeAgentId } from "./types";
 import type { TranscriptEntry } from "../transcript";
 import { discoverSessions, getTranscriptPath, getSessionDir, escapeCwd } from "../sessions";
-import { parseTranscriptLine, currentActionFromTranscript } from "../transcript";
+import {
+  parseTranscriptLine,
+  currentActionFromTranscript,
+  actionForClaudeTool,
+  toolNameOf,
+} from "../transcript";
 import { newestMtime } from "../activity-mtime";
 import { resolveHostApp } from "../host-app";
 
@@ -14,10 +19,7 @@ const MAX_RECENT_ACTIONS = 20;
 
 /** Map a Claude TranscriptEntry to a provider-agnostic ActivityEntry */
 export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
-  const rawToolName =
-    entry.type === "tool_use"
-      ? entry.summary.split(" ")[0].split(":")[0]
-      : undefined;
+  const rawToolName = entry.type === "tool_use" ? toolNameOf(entry) : undefined;
 
   let category: NormalizedAction;
   switch (entry.type) {
@@ -27,15 +29,9 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
     case "text":
       category = "writing";
       break;
-    case "tool_use": {
-      const toolName = rawToolName ?? "";
-      if (toolName === "Read") category = "reading";
-      else if (toolName === "Edit" || toolName === "Write") category = "editing";
-      else if (toolName === "Bash") category = "executing";
-      else if (toolName === "Agent") category = "delegating";
-      else category = "other";
+    case "tool_use":
+      category = actionForClaudeTool(rawToolName ?? "");
       break;
-    }
     case "subagent_start":
     case "subagent_stop":
       category = "delegating";
@@ -53,6 +49,21 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
   };
 }
 
+export interface ClaudeCodeProviderOptions {
+  /**
+   * Base dir for background-task output files
+   * (`<tasksBaseDir>/<escaped-cwd>/<sessionId>/tasks/*.output`).
+   * Claude Code streams background task output there continuously, so the
+   * files' mtimes are a live activity signal. Injectable for tests.
+   */
+  tasksBaseDir?: string;
+}
+
+function defaultTasksBaseDir(): string {
+  const uid = typeof process.getuid === "function" ? process.getuid() : 0;
+  return `/tmp/claude-${uid}`;
+}
+
 export class ClaudeCodeProvider implements AgentProvider {
   readonly name = "claude-code";
   readonly displayName = "Claude Code";
@@ -60,12 +71,14 @@ export class ClaudeCodeProvider implements AgentProvider {
   private readonly claudeHome: string;
   private readonly sessionsDir: string;
   private readonly projectsDir: string;
+  private readonly tasksBaseDir: string;
 
-  constructor(claudeHome?: string) {
+  constructor(claudeHome?: string, opts: ClaudeCodeProviderOptions = {}) {
     const home = process.env.HOME || os.homedir();
     this.claudeHome = claudeHome ?? path.join(home, ".claude");
     this.sessionsDir = path.join(this.claudeHome, "sessions");
     this.projectsDir = path.join(this.claudeHome, "projects");
+    this.tasksBaseDir = opts.tasksBaseDir ?? defaultTasksBaseDir();
   }
 
   isAvailable(): boolean {
@@ -106,27 +119,37 @@ export class ClaudeCodeProvider implements AgentProvider {
       }
     }
 
-    // Activity signal = freshest mtime across the transcript and the session's
-    // subagent/tool-result files. These are written as work happens, so this is
-    // much fresher than parsing per-turn token-usage timestamps.
+    // Activity signal = freshest mtime across the transcript, the session's
+    // subagent/tool-result files, and background-task output files. These are
+    // written as work happens, so this is much fresher than parsing per-turn
+    // token-usage timestamps. A "shell" session status is authoritative —
+    // Claude Code asserts a command is executing right now — so it counts as
+    // current activity regardless of file mtimes (a long build writes nothing
+    // until it finishes).
     const sessionDir = getSessionDir(this.projectsDir, session.cwd, session.sessionId);
     const transcriptFile = path.join(
       this.projectsDir,
       escapeCwd(session.cwd),
       `${session.sessionId}.jsonl`
     );
-    const lastTokenActivityAt = newestMtime([
-      transcriptFile,
-      path.join(sessionDir, "subagents"),
-      path.join(sessionDir, "tool-results"),
-    ]);
+    const lastTokenActivityAt =
+      session.status === "shell"
+        ? Date.now()
+        : newestMtime([
+            transcriptFile,
+            path.join(sessionDir, "subagents"),
+            path.join(sessionDir, "tool-results"),
+            path.join(this.tasksBaseDir, escapeCwd(session.cwd), session.sessionId, "tasks"),
+          ]);
 
     const currentAction: NormalizedAction =
-      session.status === "waiting"
-        ? "waiting"
-        : session.status === "idle"
-          ? "idle"
-          : currentActionFromTranscript(recentTranscript);
+      session.status === "shell"
+        ? "executing"
+        : session.status === "waiting"
+          ? "waiting"
+          : session.status === "idle"
+            ? "idle"
+            : currentActionFromTranscript(recentTranscript);
 
     const hostApp = resolveHostApp(
       session.pid,
@@ -139,11 +162,10 @@ export class ClaudeCodeProvider implements AgentProvider {
       provider: this.name,
       pid: session.pid,
       cwd: session.cwd,
-      // Claude Code can report non-canonical statuses (e.g. "shell") that aren't
-      // in the Agent vocabulary. Collapse anything that isn't "idle" to the
-      // canonical "busy" so downstream consumers agree: the idle override (which
-      // only acts on "busy") and the scene (which paints non-idle as working).
-      // "waiting" → "busy" keeps the active look; currentAction preserves "waiting".
+      // Collapse session statuses to the Agent vocabulary: anything that isn't
+      // "idle" is "busy" (the scene paints non-idle as working). The richer
+      // session statuses survive in currentAction — "waiting" → ❓ and
+      // "shell" → ⚡ executing.
       status: session.status === "idle" ? "idle" : "busy",
       startedAt: session.startedAt,
       currentAction,

@@ -35,7 +35,7 @@ export interface Agent {
   provider: string;
   pid: number;
   cwd: string;
-  status: "busy" | "idle" | "waiting" | "stalled";
+  status: "busy" | "idle" | "waiting";
   startedAt: number;
   currentAction: NormalizedAction;
   /** Epoch ms of the most recent token-bearing LLM round-trip; undefined = unknown. */

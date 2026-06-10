@@ -1,9 +1,9 @@
 import type { Agent } from "./providers/types";
 
 /**
- * Default window with no file activity before an agent is marked "stalled".
- * Conservative because the signal (transcript/rollout file mtime) still lags
- * during an in-progress turn — see activity-mtime.ts.
+ * Default window with no file activity before a "busy" agent is demoted to
+ * "idle". Conservative because the signal (transcript/rollout file mtime)
+ * still lags during an in-progress turn — see activity-mtime.ts.
  */
 export const DEFAULT_IDLE_TIMEOUT_MS = 300_000;
 
@@ -25,9 +25,13 @@ export function parseIdleTimeoutParam(raw: string | null): number {
 }
 
 /**
- * Force a provider-"busy" agent to "stalled" when there has been no file
+ * Demote a provider-"busy" agent to "idle" when there has been no file
  * activity (`lastTokenActivityAt`) for `timeoutMs`. Pure: returns the SAME
  * agent reference when nothing changes, or a new object when overridden.
+ *
+ * Agents that are provably working are never demoted: a session running a
+ * shell command reports a current activity signal (status "shell" → now),
+ * and background-task output files are part of the activity sweep.
  *
  * - Only "busy" agents are affected (normal idle/waiting are left alone).
  * - A "waiting for input" agent (currentAction === "waiting") is preserved.
@@ -38,5 +42,5 @@ export function applyIdleOverride(agent: Agent, now: number, timeoutMs: number):
   if (agent.currentAction === "waiting") return agent;
   if (agent.lastTokenActivityAt === undefined) return agent;
   if (now - agent.lastTokenActivityAt <= timeoutMs) return agent;
-  return { ...agent, status: "stalled", currentAction: "idle" };
+  return { ...agent, status: "idle", currentAction: "idle" };
 }

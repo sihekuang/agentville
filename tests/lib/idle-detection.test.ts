@@ -26,9 +26,9 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
 }
 
 describe("applyIdleOverride", () => {
-  it("flips a busy agent with stale token flow to stalled", () => {
+  it("flips a busy agent with stale token flow to idle", () => {
     const out = applyIdleOverride(makeAgent({ lastTokenActivityAt: NOW - 90_000 }), NOW, 60_000);
-    expect(out.status).toBe("stalled");
+    expect(out.status).toBe("idle");
     expect(out.currentAction).toBe("idle");
   });
 
@@ -52,12 +52,12 @@ describe("applyIdleOverride", () => {
     expect(applyIdleOverride(a, NOW, 60_000)).toBe(a);
   });
 
-  it("does not stall at exactly the timeout boundary", () => {
+  it("does not demote at exactly the timeout boundary", () => {
     const a = makeAgent({ lastTokenActivityAt: NOW - 60_000 });
     expect(applyIdleOverride(a, NOW, 60_000).status).toBe("busy");
   });
 
-  it("never stalls when the timeout is Infinity (Off)", () => {
+  it("never demotes when the timeout is Infinity (Off)", () => {
     const a = makeAgent({ lastTokenActivityAt: NOW - 10_000_000 });
     expect(applyIdleOverride(a, NOW, Number.POSITIVE_INFINITY).status).toBe("busy");
   });
