@@ -33,6 +33,42 @@ describe("newestMtime", () => {
     expect(newestMtime([file, subagents])).toBe(expected);
   });
 
+  it("sees files nested several levels below a swept directory (workflow run files)", () => {
+    const transcript = write("session.jsonl", 1_000_000);
+    const nested = write(
+      "session/subagents/workflows/wf-run-1/agent-1.jsonl",
+      7_000_000
+    );
+    // Freeze the intermediate dirs older than everything: appending to a
+    // nested file does not bump its ancestor directories' mtimes, so the
+    // sweep must reach the file itself.
+    const subagents = path.join(dir, "session", "subagents");
+    for (const d of [
+      subagents,
+      path.join(subagents, "workflows"),
+      path.join(subagents, "workflows", "wf-run-1"),
+    ]) {
+      fs.utimesSync(d, 2, 2);
+    }
+    expect(newestMtime([transcript, subagents])).toBe(
+      fs.statSync(nested).mtimeMs
+    );
+  });
+
+  it("ignores files deeper than the sweep depth cap", () => {
+    const a = write("a.jsonl", 9_000_000);
+    // 6 entry levels below the swept dir — one past the cap of 5.
+    write("deep/1/2/3/4/5/too-deep.jsonl", 99_000_000);
+    const deep = path.join(dir, "deep");
+    let d = deep;
+    fs.utimesSync(d, 2, 2);
+    for (const seg of ["1", "2", "3", "4", "5"]) {
+      d = path.join(d, seg);
+      fs.utimesSync(d, 2, 2);
+    }
+    expect(newestMtime([a, deep])).toBe(fs.statSync(a).mtimeMs);
+  });
+
   it("skips missing paths", () => {
     const a = write("a.jsonl", 2_000_000);
     expect(newestMtime([a, path.join(dir, "does-not-exist")])).toBe(fs.statSync(a).mtimeMs);
