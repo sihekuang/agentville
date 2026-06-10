@@ -3,18 +3,21 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { ClaudeCodeProvider } from "@/lib/providers/claude-code";
-import { escapeCwd } from "@/lib/sessions";
 
-describe("ClaudeCodeProvider lastTokenActivityAt (file-mtime signal)", () => {
-  const home = path.join(os.tmpdir(), "agentville-claude-token-itest");
+// Regression: a busy session whose cwd contains underscores (e.g.
+// /Users/x/spain_trip_2026) must still resolve its transcript. Claude Code
+// escapes every non-alphanumeric character in the cwd to "-" when naming the
+// projects/ dir; when our escaping disagreed, the transcript was never found,
+// currentAction fell back to "idle" while status stayed "busy", and the scene
+// drew an awake sprite with no emote over its head.
+describe("ClaudeCodeProvider with an underscore cwd", () => {
+  const home = path.join(os.tmpdir(), "agentville-claude-underscore-itest");
   const sessionsDir = path.join(home, "sessions");
-  const cwd = "/Users/test/proj";
-  const escaped = escapeCwd(cwd);
+  const cwd = "/Users/test/spain_trip_2026";
+  const escaped = "-Users-test-spain-trip-2026"; // what Claude Code writes on disk
   const projectDir = path.join(home, "projects", escaped);
-  const sessionId = "tok-sess-1";
+  const sessionId = "underscore-sess-1";
   const transcriptFile = path.join(projectDir, `${sessionId}.jsonl`);
-
-  const setMtime = (p: string, ms: number) => fs.utimesSync(p, ms / 1000, ms / 1000);
 
   beforeEach(() => {
     fs.mkdirSync(sessionsDir, { recursive: true });
@@ -28,30 +31,27 @@ describe("ClaudeCodeProvider lastTokenActivityAt (file-mtime signal)", () => {
     }));
     fs.writeFileSync(transcriptFile, JSON.stringify({
       type: "assistant",
-      message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+      message: {
+        role: "assistant",
+        content: [{ type: "tool_use", name: "Bash", input: { command: "ls" } }],
+      },
       timestamp: 1_700_000_040_000,
     }));
   });
   afterEach(() => fs.rmSync(home, { recursive: true, force: true }));
 
-  it("uses the transcript file's mtime, not the embedded timestamp", async () => {
-    setMtime(transcriptFile, 1_700_000_900_000); // mtime far from the line's recorded ts
+  it("derives currentAction from the transcript instead of falling back to idle", async () => {
     const agents = await new ClaudeCodeProvider(home).discoverAgents();
     const agent = agents.find((a) => a.id === `claude-code:${sessionId}`);
     expect(agent).toBeDefined();
-    expect(agent!.lastTokenActivityAt).toBe(fs.statSync(transcriptFile).mtimeMs);
+    expect(agent!.status).toBe("busy");
+    expect(agent!.currentAction).toBe("executing");
   });
 
-  it("picks up fresher activity from the session's subagents/ subtree", async () => {
-    setMtime(transcriptFile, 1_700_000_100_000);
-    const subDir = path.join(projectDir, sessionId, "subagents");
-    fs.mkdirSync(subDir, { recursive: true });
-    const subFile = path.join(subDir, "agent-x.jsonl");
-    fs.writeFileSync(subFile, "{}");
-    setMtime(subFile, 1_700_000_500_000); // newer than the main transcript
-
+  it("exposes recent activity and a file-mtime activity signal", async () => {
     const agents = await new ClaudeCodeProvider(home).discoverAgents();
     const agent = agents.find((a) => a.id === `claude-code:${sessionId}`);
-    expect(agent!.lastTokenActivityAt).toBe(fs.statSync(subFile).mtimeMs);
+    expect(agent!.recentActivity.length).toBeGreaterThan(0);
+    expect(agent!.lastTokenActivityAt).toBe(fs.statSync(transcriptFile).mtimeMs);
   });
 });

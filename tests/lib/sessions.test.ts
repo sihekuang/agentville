@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { discoverSessions } from "@/lib/sessions";
+import { discoverSessions, escapeCwd, getTranscriptPath } from "@/lib/sessions";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -53,5 +53,47 @@ describe("discoverSessions", () => {
 
     const result = await discoverSessions(mockSessionsDir, () => false);
     expect(result).toEqual([]);
+  });
+});
+
+describe("escapeCwd", () => {
+  it("replaces slashes and dots with dashes", () => {
+    expect(escapeCwd("/Users/test/my.project")).toBe("-Users-test-my-project");
+  });
+
+  // Claude Code escapes EVERY non-alphanumeric character to "-", not just "/"
+  // and ".": /Users/x/spain_trip_2026 lives at projects/-Users-x-spain-trip-2026.
+  it("replaces underscores like Claude Code does", () => {
+    expect(escapeCwd("/Users/test/spain_trip_2026")).toBe(
+      "-Users-test-spain-trip-2026"
+    );
+  });
+
+  it("replaces other non-alphanumeric characters (spaces, @) like Claude Code does", () => {
+    expect(escapeCwd("/Users/test/my app@v2")).toBe("-Users-test-my-app-v2");
+  });
+});
+
+describe("getTranscriptPath", () => {
+  const mockProjectsDir = path.join(os.tmpdir(), "agentville-test-projects");
+
+  beforeEach(() => {
+    fs.mkdirSync(mockProjectsDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(mockProjectsDir, { recursive: true, force: true });
+  });
+
+  it("finds the transcript for a cwd containing underscores", () => {
+    const escaped = "-Users-test-spain-trip-2026";
+    const sessionId = "sess-1";
+    fs.mkdirSync(path.join(mockProjectsDir, escaped), { recursive: true });
+    const jsonl = path.join(mockProjectsDir, escaped, `${sessionId}.jsonl`);
+    fs.writeFileSync(jsonl, "");
+
+    expect(
+      getTranscriptPath(mockProjectsDir, "/Users/test/spain_trip_2026", sessionId)
+    ).toBe(jsonl);
   });
 });
