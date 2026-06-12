@@ -4,8 +4,12 @@ import type { Agent, ActivityEntry, NormalizedAction } from "@/lib/providers/typ
 
 const NOW = 1_700_000_000_000;
 
-function entry(category: NormalizedAction, age: number): ActivityEntry {
-  return { timestamp: NOW - age, category, summary: `${category} activity` };
+function entry(
+  category: NormalizedAction,
+  age: number,
+  opts: Partial<ActivityEntry> = {}
+): ActivityEntry {
+  return { timestamp: NOW - age, category, summary: `${category} activity`, ...opts };
 }
 
 function makeAgent(overrides: Partial<Agent> = {}, lastEntryAge = 0): Agent {
@@ -98,14 +102,18 @@ describe("isLongRunningState", () => {
     expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
   });
 
-  it("falls back to newest-entry age when the newest entry does not match the current action", () => {
+  it("is false when the newest entry does not match the current action", () => {
     // currentAction derived from session status (shell → executing) while the
-    // transcript's newest entry is something else.
+    // transcript's newest entry is something else. In practice this is a
+    // BACKGROUND shell pinning the status between turns — the agent is
+    // conversationally idle, so the mismatch age must not earn an hourglass.
+    // (A genuine foreground command always matches: its tool_use entry is
+    // written when the command starts.)
     const stale = makeAgent({
       currentAction: "executing",
       recentActivity: [entry("thinking", 90_000)],
     });
-    expect(isLongRunningState(stale, NOW, 60_000)).toBe(true);
+    expect(isLongRunningState(stale, NOW, 60_000)).toBe(false);
 
     const fresh = makeAgent({
       currentAction: "executing",
@@ -114,8 +122,64 @@ describe("isLongRunningState", () => {
     expect(isLongRunningState(fresh, NOW, 60_000)).toBe(false);
   });
 
+  it("is false for the background-shell case: status busy, action executing, newest entry is the turn-final reply", () => {
+    // Captured live: a session with background monitor shells keeps session
+    // status "shell" between turns. The newest entry is the assistant's last
+    // reply text, aging unboundedly while the agent waits for the user.
+    const agent = makeAgent({
+      currentAction: "executing",
+      recentActivity: [
+        entry("executing", 100_000),
+        entry("thinking", 70_000),
+        entry("writing", 62_000),
+      ],
+    });
+    expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
+  });
+
   it("is false when there is no activity history", () => {
     expect(isLongRunningState(makeAgent({ recentActivity: [] }), NOW, 60_000)).toBe(false);
+  });
+
+  it("is false right after a new user prompt, even when the previous turn's entries are stale", () => {
+    // The where-is-my-lego repro: the agent just went busy on a fresh prompt,
+    // but the only other entries are from a turn that ended 10+ minutes ago.
+    const agent = makeAgent({
+      currentAction: "thinking",
+      recentActivity: [
+        entry("executing", 700_000),
+        entry("writing", 690_000),
+        entry("thinking", 5_000, { turnBoundary: true }),
+      ],
+    });
+    expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
+  });
+
+  it("does not extend a run across a turn boundary even when categories match", () => {
+    // Previous turn ended mid-thinking; the new prompt also maps to thinking.
+    // The contiguous run must start at the boundary, not reach into the old turn.
+    const agent = makeAgent({
+      currentAction: "thinking",
+      recentActivity: [
+        entry("thinking", 400_000),
+        entry("thinking", 390_000),
+        entry("thinking", 5_000, { turnBoundary: true }),
+      ],
+    });
+    expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
+  });
+
+  it("is true when the agent has been in-state since an old turn boundary", () => {
+    // Prompt arrived 90s ago and the model has streamed thinking ever since.
+    const agent = makeAgent({
+      currentAction: "thinking",
+      recentActivity: [
+        entry("thinking", 90_000, { turnBoundary: true }),
+        entry("thinking", 40_000),
+        entry("thinking", 5_000),
+      ],
+    });
+    expect(isLongRunningState(agent, NOW, 60_000)).toBe(true);
   });
 
   it("defaults to the exported threshold", () => {

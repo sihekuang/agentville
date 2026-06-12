@@ -17,6 +17,18 @@ import {
 
 const MAX_RECENT_ACTIONS = 20;
 const BUSY_WINDOW_MS = 10_000;
+
+/** Map a Codex rollout entry to a provider-agnostic ActivityEntry */
+export function toCodexActivityEntry(e: CodexEntry): ActivityEntry {
+  return {
+    timestamp: e.timestamp,
+    category: normalizeCodexAction(e),
+    summary: e.summary,
+    rawType: e.kind,
+    rawToolName: e.kind === "function_call" ? e.name : undefined,
+    ...(e.kind === "user_message" ? { turnBoundary: true } : {}),
+  };
+}
 // Codex sessions must NOT match against Claude's IDE locks at ~/.claude/ide.
 // Force the process-tree fallback by pointing at a path that won't exist.
 const CODEX_IDE_DIR = "/tmp/__codex_no_ide_locks__";
@@ -80,13 +92,7 @@ export class CodexProvider implements AgentProvider {
     const status: Agent["status"] =
       this.now() - mtimeMs < BUSY_WINDOW_MS ? "busy" : "idle";
 
-    const recentActivity: ActivityEntry[] = recent.map((e) => ({
-      timestamp: e.timestamp,
-      category: normalizeCodexAction(e),
-      summary: e.summary,
-      rawType: e.kind,
-      rawToolName: e.kind === "function_call" ? e.name : undefined,
-    }));
+    const recentActivity: ActivityEntry[] = recent.map(toCodexActivityEntry);
 
     const hostApp = resolveHostApp(p.pid, p.cwd, p.sessionId, CODEX_IDE_DIR);
 

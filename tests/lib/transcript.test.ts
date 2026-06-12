@@ -125,7 +125,7 @@ describe("parseTranscriptLine", () => {
     });
   });
 
-  it("returns null for non-assistant lines", () => {
+  it("returns null for user lines without prompt content", () => {
     const line = JSON.stringify({ type: "user", message: { role: "user" } });
     expect(parseTranscriptLine(line)).toBeNull();
   });
@@ -133,6 +133,95 @@ describe("parseTranscriptLine", () => {
   it("returns null for attachment lines", () => {
     const line = JSON.stringify({ type: "attachment" });
     expect(parseTranscriptLine(line)).toBeNull();
+  });
+
+  it("parses a typed user prompt (string content) into a user_prompt entry", () => {
+    const line = JSON.stringify({
+      type: "user",
+      message: { role: "user", content: "fix the login bug" },
+      sessionId: "abc-123",
+      uuid: "u11",
+      timestamp: 1700000030000,
+    });
+
+    expect(parseTranscriptLine(line)).toEqual({
+      timestamp: 1700000030000,
+      type: "user_prompt",
+      summary: "fix the login bug",
+    });
+  });
+
+  it("parses a user prompt with content blocks into a user_prompt entry", () => {
+    const line = JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: "please add tests" }],
+      },
+      sessionId: "abc-123",
+      uuid: "u12",
+      timestamp: 1700000031000,
+    });
+
+    expect(parseTranscriptLine(line)).toEqual({
+      timestamp: 1700000031000,
+      type: "user_prompt",
+      summary: "please add tests",
+    });
+  });
+
+  it("truncates long user prompts in the summary", () => {
+    const line = JSON.stringify({
+      type: "user",
+      message: { role: "user", content: "x".repeat(200) },
+      timestamp: 1700000032000,
+    });
+
+    const result = parseTranscriptLine(line);
+    expect(result?.type).toBe("user_prompt");
+    expect(result?.summary).toHaveLength(80);
+    expect(result?.summary.endsWith("...")).toBe(true);
+  });
+
+  it("returns null for tool_result user lines", () => {
+    // Tool results are recorded as user-role lines; they are NOT prompts and
+    // must not become entries (they'd break contiguous same-action runs).
+    const line = JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          { type: "tool_result", tool_use_id: "t1", content: "file contents" },
+        ],
+      },
+      timestamp: 1700000033000,
+    });
+    expect(parseTranscriptLine(line)).toBeNull();
+  });
+
+  it("returns null for meta user lines", () => {
+    const line = JSON.stringify({
+      type: "user",
+      isMeta: true,
+      message: { role: "user", content: "Caveat: local commands..." },
+      timestamp: 1700000034000,
+    });
+    expect(parseTranscriptLine(line)).toBeNull();
+  });
+
+  it("returns null for local-command user lines", () => {
+    const cmd = JSON.stringify({
+      type: "user",
+      message: { role: "user", content: "<command-name>/clear</command-name>" },
+      timestamp: 1700000035000,
+    });
+    const out = JSON.stringify({
+      type: "user",
+      message: { role: "user", content: "<local-command-stdout></local-command-stdout>" },
+      timestamp: 1700000036000,
+    });
+    expect(parseTranscriptLine(cmd)).toBeNull();
+    expect(parseTranscriptLine(out)).toBeNull();
   });
 });
 
@@ -225,6 +314,14 @@ describe("currentActionFromTranscript", () => {
       },
     ]);
     expect(action).toBe("waiting");
+  });
+
+  it("returns 'thinking' for last user_prompt entry (new turn, model not yet streaming)", () => {
+    const action: NormalizedAction = currentActionFromTranscript([
+      { timestamp: 1, type: "text", summary: "Done with the last task." },
+      { timestamp: 2, type: "user_prompt", summary: "now fix the tests" },
+    ]);
+    expect(action).toBe("thinking");
   });
 
   it("uses the last entry when multiple entries are present", () => {

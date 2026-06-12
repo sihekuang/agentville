@@ -36,6 +36,9 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
     case "subagent_stop":
       category = "delegating";
       break;
+    case "user_prompt":
+      category = "thinking";
+      break;
     default:
       category = "other";
   }
@@ -46,6 +49,7 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
     summary: entry.summary,
     rawType: entry.type,
     rawToolName,
+    ...(entry.type === "user_prompt" ? { turnBoundary: true } : {}),
   };
 }
 

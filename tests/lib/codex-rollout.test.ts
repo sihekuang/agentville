@@ -97,6 +97,10 @@ describe("normalizeCodexAction", () => {
   it("maps unknown function_call name to other", () => {
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "future_tool" })).toBe("other");
   });
+
+  it("maps user_message to thinking (new turn, model not yet streaming)", () => {
+    expect(normalizeCodexAction({ ...base, kind: "user_message" })).toBe("thinking");
+  });
 });
 
 describe("parseCodexRolloutLine", () => {
@@ -106,15 +110,42 @@ describe("parseCodexRolloutLine", () => {
     expect(parseCodexRolloutLine("not json")).toBeNull();
   });
 
-  it("returns null for user messages and function_call_output", () => {
-    expect(parseCodexRolloutLine(JSON.stringify({
-      timestamp: "2026-05-29T00:00:00Z", type: "response_item",
-      payload: { type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }
-    }))).toBeNull();
-
+  it("returns null for function_call_output", () => {
     expect(parseCodexRolloutLine(JSON.stringify({
       timestamp: "2026-05-29T00:00:00Z", type: "response_item",
       payload: { type: "function_call_output", output: "ok", call_id: "x" }
+    }))).toBeNull();
+  });
+
+  it("parses a user message into a user_message entry (turn boundary)", () => {
+    const e = parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-05-30T03:13:38.839Z", type: "response_item",
+      payload: { type: "message", role: "user", content: [{ type: "input_text", text: "pick up last handed off context" }] }
+    }))!;
+    expect(e).not.toBeNull();
+    expect(e.kind).toBe("user_message");
+    expect(e.summary).toBe("pick up last handed off context");
+    expect(e.timestamp).toBe(Date.parse("2026-05-30T03:13:38.839Z"));
+  });
+
+  it("ignores harness-injected context wrappers sent as user messages", () => {
+    for (const text of [
+      "<environment_context>\n  <cwd>/p</cwd>\n</environment_context>",
+      "<user_instructions>\nBe nice.\n</user_instructions>",
+    ]) {
+      expect(parseCodexRolloutLine(JSON.stringify({
+        timestamp: "2026-05-30T03:13:38.836Z", type: "response_item",
+        payload: { type: "message", role: "user", content: [{ type: "input_text", text }] }
+      }))).toBeNull();
+    }
+  });
+
+  it("ignores event_msg user_message duplicates of the prompt", () => {
+    // The same prompt arrives twice: as a response_item AND an event_msg.
+    // Only the response_item becomes an entry.
+    expect(parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-05-30T03:13:38.839Z", type: "event_msg",
+      payload: { type: "user_message", message: "pick up last handed off context" }
     }))).toBeNull();
   });
 
@@ -201,12 +232,14 @@ describe("parseCodexRollout (against fixtures)", () => {
   it("parses the v0.135 sample fixture", () => {
     const raw = fs.readFileSync(path.join(FIXTURES, "codex-rollout-sample.jsonl"), "utf-8");
     const entries = parseCodexRollout(raw);
-    // 7 mapped entries: reasoning + 3 exec_command + write_stdin + update_plan + assistant message
-    // (user message and function_call_output are skipped)
-    expect(entries.length).toBe(7);
+    // 8 mapped entries: user prompt + reasoning + 3 exec_command + write_stdin
+    // + update_plan + assistant message (function_call_output is skipped)
+    expect(entries.length).toBe(8);
+    expect(entries[0].kind).toBe("user_message");
 
     const actions: NormalizedAction[] = entries.map(normalizeCodexAction);
     expect(actions).toEqual([
+      "thinking",   // user prompt (turn boundary)
       "thinking",   // reasoning
       "reading",    // exec_command: ls -la
       "executing",  // exec_command: npm test
@@ -220,10 +253,11 @@ describe("parseCodexRollout (against fixtures)", () => {
   it("parses the legacy v0.39 fixture", () => {
     const raw = fs.readFileSync(path.join(FIXTURES, "codex-rollout-legacy.jsonl"), "utf-8");
     const entries = parseCodexRollout(raw);
-    // reasoning + shell(read) + shell(exec) + assistant message = 4
-    expect(entries.length).toBe(4);
+    // user prompt + reasoning + shell(read) + shell(exec) + assistant message = 5
+    expect(entries.length).toBe(5);
+    expect(entries[0].kind).toBe("user_message");
 
     const actions = entries.map(normalizeCodexAction);
-    expect(actions).toEqual(["thinking", "reading", "executing", "writing"]);
+    expect(actions).toEqual(["thinking", "thinking", "reading", "executing", "writing"]);
   });
 });

@@ -14,10 +14,15 @@ export const LONG_RUNNING_THRESHOLD_MS = 60_000;
  *
  * "Time in state" is the start of the contiguous run of `recentActivity`
  * entries matching `currentAction` — an agent reading file after file for
- * three minutes qualifies even though each individual read is fresh. When the
- * newest entry doesn't match `currentAction` (the action came from session
- * status rather than the transcript, e.g. shell → executing), fall back to
- * the newest entry's age.
+ * three minutes qualifies even though each individual read is fresh. A run
+ * never extends across a turn boundary (a user prompt): a new prompt resets
+ * the clock even when the categories on both sides happen to match. When the
+ * newest entry doesn't match `currentAction`, time in state is unknowable, so
+ * never long-running: the only real-world mismatch is a status-derived action
+ * (shell → executing) from a BACKGROUND shell pinning the session status
+ * between turns — the newest entry is then the turn-final reply, aging
+ * unboundedly while the agent just waits for the user. A genuine foreground
+ * command always matches, because its tool_use entry is written at start.
  */
 export function isLongRunningState(
   agent: Agent,
@@ -30,11 +35,12 @@ export function isLongRunningState(
   const last = activity[activity.length - 1];
   if (!last) return false;
 
+  if (last.category !== agent.currentAction) return false;
+
   let stateStart = last.timestamp;
-  if (last.category === agent.currentAction) {
-    for (let i = activity.length - 1; i >= 0 && activity[i].category === agent.currentAction; i--) {
-      stateStart = activity[i].timestamp;
-    }
+  for (let i = activity.length - 1; i >= 0 && activity[i].category === agent.currentAction; i--) {
+    stateStart = activity[i].timestamp;
+    if (activity[i].turnBoundary) break;
   }
   return now - stateStart > thresholdMs;
 }
