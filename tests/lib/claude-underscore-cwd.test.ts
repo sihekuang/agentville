@@ -45,7 +45,7 @@ describe("ClaudeCodeProvider with an underscore cwd", () => {
     const agent = agents.find((a) => a.id === `claude-code:${sessionId}`);
     expect(agent).toBeDefined();
     expect(agent!.status).toBe("busy");
-    expect(agent!.currentAction).toBe("executing");
+    expect(agent!.currentAction).toBe("shell");
   });
 
   it("exposes recent activity and a file-mtime activity signal", async () => {

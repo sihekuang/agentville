@@ -46,7 +46,7 @@ describe("toCodexActivityEntry (Codex)", () => {
       cmd: "npm test",
       summary: "$ npm test",
     });
-    expect(entry.category).toBe("executing");
+    expect(entry.category).toBe("shell");
     expect(entry.rawToolName).toBe("shell");
     expect(entry.turnBoundary).toBeUndefined();
   });

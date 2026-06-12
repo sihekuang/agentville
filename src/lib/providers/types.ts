@@ -12,6 +12,8 @@ export type NormalizedAction =
   | "reading"
   | "editing"
   | "executing"
+  | "shell"
+  | "monitoring"
   | "writing"
   | "delegating"
   | "other"

@@ -510,6 +510,8 @@ function formatAction(action: NormalizedAction): string {
     case "reading":    return "\u{1F4D6}";  // 📖
     case "editing":    return "✏️";
     case "executing":  return "⚡";
+    case "shell":      return "\u{276F}_";  // ❯_
+    case "monitoring": return "\u{1F440}";  // 👀
     case "delegating": return "\u{1F916}";  // 🤖
     case "other":      return "\u{1F527}";  // 🔧
     case "writing":    return "\u{1F4AC}";  // 💬

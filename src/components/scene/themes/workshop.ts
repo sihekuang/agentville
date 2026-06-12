@@ -25,6 +25,8 @@ export const workshopTheme: SceneTheme = {
       reading:    { row: 2, frames: 2, speed: 0.03 },
       editing:    { row: 3, frames: 4, speed: 0.08 },
       executing:  { row: 4, frames: 4, speed: 0.06 },
+      shell:      { row: 4, frames: 4, speed: 0.06 },
+      monitoring: { row: 4, frames: 4, speed: 0.06 },
       delegating: { row: 5, frames: 4, speed: 0.05 },
       other:      { row: 2, frames: 2, speed: 0.03 },
       writing:    { row: 3, frames: 4, speed: 0.1 },

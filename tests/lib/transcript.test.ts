@@ -283,11 +283,11 @@ describe("currentActionFromTranscript", () => {
     expect(action).toBe("editing");
   });
 
-  it("returns 'executing' for last Bash tool_use entry", () => {
+  it("returns 'shell' for last Bash tool_use entry", () => {
     const action: NormalizedAction = currentActionFromTranscript([
       { timestamp: 1, type: "tool_use", summary: "Bash: npm test" },
     ]);
-    expect(action).toBe("executing");
+    expect(action).toBe("shell");
   });
 
   it("returns 'delegating' for last Agent tool_use entry", () => {
@@ -330,7 +330,7 @@ describe("currentActionFromTranscript", () => {
       { timestamp: 2, type: "thinking", summary: "Thinking..." },
       { timestamp: 3, type: "tool_use", summary: "Bash: npm test" },
     ]);
-    expect(action).toBe("executing");
+    expect(action).toBe("shell");
   });
 });
 
@@ -354,16 +354,16 @@ describe("actionForClaudeTool", () => {
     ["Write", "editing"],
     ["MultiEdit", "editing"],
     ["NotebookEdit", "editing"],
-    // executing
-    ["Bash", "executing"],
-    ["BashOutput", "executing"],
-    ["KillShell", "executing"],
-    ["PowerShell", "executing"],
-    ["Monitor", "executing"],
+    // executing-family
+    ["Bash", "shell"],
+    ["BashOutput", "monitoring"],
+    ["KillShell", "shell"],
+    ["PowerShell", "shell"],
+    ["Monitor", "monitoring"],
     ["Skill", "executing"],
     ["SlashCommand", "executing"],
     ["TaskStop", "executing"],
-    ["TaskOutput", "executing"],
+    ["TaskOutput", "monitoring"],
     // delegating
     ["Agent", "delegating"],
     ["Task", "delegating"], // legacy name of the Agent tool

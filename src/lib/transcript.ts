@@ -41,16 +41,18 @@ const CLAUDE_TOOL_ACTIONS: Record<string, NormalizedAction> = {
   Write: "editing",
   MultiEdit: "editing",
   NotebookEdit: "editing",
-  // executing
-  Bash: "executing",
-  BashOutput: "executing",
-  KillShell: "executing",
-  PowerShell: "executing",
-  Monitor: "executing",
+  // shell commands
+  Bash: "shell",
+  KillShell: "shell",
+  PowerShell: "shell",
+  // monitoring (watching live output)
+  BashOutput: "monitoring",
+  Monitor: "monitoring",
+  TaskOutput: "monitoring",
+  // executing (non-shell execution-ish tools)
   Skill: "executing",
   SlashCommand: "executing",
   TaskStop: "executing",
-  TaskOutput: "executing",
   // delegating
   Agent: "delegating",
   Task: "delegating",
