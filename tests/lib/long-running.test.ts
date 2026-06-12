@@ -31,7 +31,7 @@ function makeAgent(overrides: Partial<Agent> = {}, lastEntryAge = 0): Agent {
 describe("isLongRunningState", () => {
   it("is true for every working state held past the threshold", () => {
     const actions: NormalizedAction[] = [
-      "thinking", "reading", "editing", "executing", "writing", "delegating", "other",
+      "thinking", "reading", "editing", "executing", "shell", "monitoring", "writing", "delegating", "other",
     ];
     for (const action of actions) {
       const agent = makeAgent({
@@ -102,39 +102,35 @@ describe("isLongRunningState", () => {
     expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
   });
 
-  it("is false when the newest entry does not match the current action", () => {
-    // currentAction derived from session status (shell → executing) while the
-    // transcript's newest entry is something else. In practice this is a
-    // BACKGROUND shell pinning the status between turns — the agent is
-    // conversationally idle, so the mismatch age must not earn an hourglass.
-    // (A genuine foreground command always matches: its tool_use entry is
-    // written when the command starts.)
+  it("falls back to the newest-entry age when the newest category does not match the action", () => {
+    // currentAction derived from session status (a live shell) while the
+    // newest transcript entry is something else — a BACKGROUND process while
+    // the turn is done. Time-in-state falls back to the newest entry's age.
     const stale = makeAgent({
-      currentAction: "executing",
-      recentActivity: [entry("thinking", 90_000)],
+      currentAction: "monitoring",
+      recentActivity: [entry("writing", 90_000)],
     });
-    expect(isLongRunningState(stale, NOW, 60_000)).toBe(false);
+    expect(isLongRunningState(stale, NOW, 60_000)).toBe(true);
 
     const fresh = makeAgent({
-      currentAction: "executing",
-      recentActivity: [entry("thinking", 10_000)],
+      currentAction: "monitoring",
+      recentActivity: [entry("writing", 10_000)],
     });
     expect(isLongRunningState(fresh, NOW, 60_000)).toBe(false);
   });
 
-  it("is false for the background-shell case: status busy, action executing, newest entry is the turn-final reply", () => {
-    // Captured live: a session with background monitor shells keeps session
-    // status "shell" between turns. The newest entry is the assistant's last
-    // reply text, aging unboundedly while the agent waits for the user.
+  it("shows the hourglass for the background-process case (monitoring, turn-final reply aging)", () => {
+    // trading-101 repro: status pinned "shell" by a background dev server; the
+    // newest entry is the assistant's last reply. After ~60s it earns ⏳.
     const agent = makeAgent({
-      currentAction: "executing",
+      currentAction: "monitoring",
       recentActivity: [
-        entry("executing", 100_000),
+        entry("shell", 100_000),
         entry("thinking", 70_000),
         entry("writing", 62_000),
       ],
     });
-    expect(isLongRunningState(agent, NOW, 60_000)).toBe(false);
+    expect(isLongRunningState(agent, NOW, 60_000)).toBe(true);
   });
 
   it("is false when there is no activity history", () => {
