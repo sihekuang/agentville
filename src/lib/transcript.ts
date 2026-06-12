@@ -3,7 +3,13 @@ import type { NormalizedAction } from "./providers/types";
 
 export interface TranscriptEntry {
   timestamp: number;
-  type: "tool_use" | "thinking" | "text" | "subagent_start" | "subagent_stop";
+  type:
+    | "tool_use"
+    | "thinking"
+    | "text"
+    | "subagent_start"
+    | "subagent_stop"
+    | "user_prompt";
   summary: string;
   /** Exact tool name for tool_use entries (e.g. "Read", "mcp__server__tool"). */
   toolName?: string;
@@ -70,20 +76,48 @@ interface RawTranscriptLine {
   type: string;
   message?: {
     role: string;
-    content?: Array<{
-      type: string;
-      text?: string;
-      thinking?: string;
-      name?: string;
-      id?: string;
-      input?: Record<string, unknown>;
-    }>;
+    content?:
+      | string
+      | Array<{
+          type: string;
+          text?: string;
+          thinking?: string;
+          name?: string;
+          id?: string;
+          input?: Record<string, unknown>;
+        }>;
   };
   sessionId?: string;
   uuid?: string;
   parentUuid?: string;
   timestamp?: number | string;
   isSidechain?: boolean;
+  isMeta?: boolean;
+}
+
+function truncateText(text: string, max = 80): string {
+  return text.length > max ? text.slice(0, max - 3) + "..." : text;
+}
+
+/**
+ * Extract the prompt text of a user-role line, or null when the line isn't a
+ * real prompt: tool results (recorded as user-role lines), meta lines, and
+ * local-command noise (`<command-name>`, `<local-command-stdout>`).
+ */
+function userPromptText(data: RawTranscriptLine): string | null {
+  if (data.isMeta) return null;
+  const content = data.message?.content;
+  let text: string | undefined;
+  if (typeof content === "string") {
+    text = content;
+  } else if (Array.isArray(content)) {
+    if (content.some((b) => b.type === "tool_result")) return null;
+    text = content.find((b) => b.type === "text" && b.text)?.text;
+  }
+  if (!text || text.startsWith("<command-") || text.startsWith("<local-command-")) {
+    return null;
+  }
+  return text;
 }
 
 export function parseTranscriptLine(line: string): TranscriptEntry | null {
@@ -92,6 +126,17 @@ export function parseTranscriptLine(line: string): TranscriptEntry | null {
     data = JSON.parse(line);
   } catch {
     return null;
+  }
+
+  const rawTs = data.timestamp;
+  const timestamp = typeof rawTs === "number" ? rawTs : rawTs ? new Date(rawTs).getTime() : Date.now();
+
+  // User prompts mark turn boundaries: a new prompt means any state derived
+  // from earlier entries is stale, so they must become entries too.
+  if (data.type === "user") {
+    const text = userPromptText(data);
+    if (!text) return null;
+    return { timestamp, type: "user_prompt", summary: truncateText(text) };
   }
 
   if (data.type !== "assistant") return null;
@@ -106,8 +151,6 @@ export function parseTranscriptLine(line: string): TranscriptEntry | null {
     content.filter((b) => b.type === "tool_use").pop() ??
     content.find((b) => b.type === "text" && b.text) ??
     content[0];
-  const rawTs = data.timestamp;
-  const timestamp = typeof rawTs === "number" ? rawTs : rawTs ? new Date(rawTs).getTime() : Date.now();
 
   if (block.type === "tool_use") {
     const toolName = block.name ?? "unknown";
@@ -120,9 +163,7 @@ export function parseTranscriptLine(line: string): TranscriptEntry | null {
   }
 
   if (block.type === "text" && block.text) {
-    const text =
-      block.text.length > 80 ? block.text.slice(0, 77) + "..." : block.text;
-    return { timestamp, type: "text", summary: text };
+    return { timestamp, type: "text", summary: truncateText(block.text) };
   }
 
   return null;
@@ -166,6 +207,9 @@ export function currentActionFromTranscript(
 
   if (last.type === "thinking") return "thinking";
   if (last.type === "text") return "writing";
+  // A new user prompt means the model is processing it but hasn't streamed
+  // anything yet — the previous turn's last action is no longer current.
+  if (last.type === "user_prompt") return "thinking";
 
   if (last.type === "tool_use") {
     return actionForClaudeTool(toolNameOf(last));

@@ -7,6 +7,7 @@ import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
 import { useAgentStore, type TrackedAgent } from "@/store/agents";
 import { usePip } from "@/hooks/usePip";
+import { useNow } from "@/hooks/use-now";
 import { useLoadTexture } from "./use-animation-frames";
 import { Tilemap } from "./Tilemap";
 import { AgentSprite } from "./AgentSprite";
@@ -83,6 +84,9 @@ function SceneContent({
   const viewportRef = useRef<Viewport | null>(null);
   const containerRef = useRef<Container>(null);
   const innerRef = useRef<Container>(null);
+  // The ⏳ marker is time-dependent but the agent stream only emits on data
+  // diffs — tick every 5s so a quiet scene still crosses the threshold.
+  const now = useNow(5_000);
 
   const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
   const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
@@ -163,8 +167,9 @@ function SceneContent({
         <Tilemap theme={dynamicTheme} agentCount={agentList.length} />
         {agentList.map((agent, index) => {
           const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
-          // Evaluated per stream update, so the ⏳ appears within one poll cycle.
-          const longRunning = isLongRunningState(agent, Date.now());
+          // Re-evaluated on stream updates AND the useNow tick, so the ⏳
+          // appears within ~5s of the threshold even when no data changes.
+          const longRunning = isLongRunningState(agent, now);
           return (
             <AgentSprite
               key={agent.id}

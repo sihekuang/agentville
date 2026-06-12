@@ -26,7 +26,8 @@ export function classifyCommand(cmd: string): "reading" | "executing" | "editing
 export type CodexEntry =
   | { timestamp: number; kind: "function_call"; name: string; cmd?: string; summary: string }
   | { timestamp: number; kind: "reasoning"; summary: string }
-  | { timestamp: number; kind: "message"; role: "assistant"; summary: string };
+  | { timestamp: number; kind: "message"; role: "assistant"; summary: string }
+  | { timestamp: number; kind: "user_message"; summary: string };
 
 interface RawLine {
   timestamp?: string;
@@ -109,6 +110,20 @@ export function parseCodexRolloutLine(line: string): CodexEntry | null {
     return { timestamp, kind: "message", role: "assistant", summary: truncate(text) };
   }
 
+  // User prompts mark turn boundaries (same role as Claude's user_prompt
+  // entries). Harness-injected context wrappers arrive as user messages too
+  // and are not real prompts; the prompt also appears as an event_msg
+  // duplicate, which the response_item filter above already drops.
+  if (p.type === "message" && p.role === "user") {
+    const block = (p.content ?? []).find((b) => (b.type === "input_text" || b.type === "text") && b.text);
+    const text = block?.text?.trim();
+    if (!text) return null;
+    if (text.startsWith("<environment_context>") || text.startsWith("<user_instructions>")) {
+      return null;
+    }
+    return { timestamp, kind: "user_message", summary: truncate(text) };
+  }
+
   return null;
 }
 
@@ -125,6 +140,9 @@ export function parseCodexRollout(raw: string): CodexEntry[] {
 export function normalizeCodexAction(e: CodexEntry): NormalizedAction {
   if (e.kind === "reasoning") return "thinking";
   if (e.kind === "message") return "writing";
+  // A new user prompt means the model is processing it but hasn't streamed
+  // anything yet — consistent with Claude's user_prompt → thinking.
+  if (e.kind === "user_message") return "thinking";
   switch (e.name) {
     case "exec_command":
     case "shell":

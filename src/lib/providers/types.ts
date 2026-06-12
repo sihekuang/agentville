@@ -27,6 +27,12 @@ export interface ActivityEntry {
   rawType?: string;
   /** Original tool name if applicable (e.g., "Read", "bash") */
   rawToolName?: string;
+  /**
+   * True for entries that start a new user turn (a user prompt). State
+   * derived from earlier entries is stale past this point — e.g. a
+   * contiguous same-action run never extends across a turn boundary.
+   */
+  turnBoundary?: boolean;
 }
 
 /** A discovered agent session, provider-agnostic */
