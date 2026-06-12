@@ -53,6 +53,19 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
   };
 }
 
+/**
+ * Resolve `currentAction` for a Claude session whose status is "shell" (a
+ * process is live). If the newest transcript entry is itself a shell command
+ * the agent is running it in the foreground → "shell". If the newest entry is
+ * anything else, the turn has moved on and a BACKGROUND shell is keeping the
+ * status pinned → "monitoring". No transcript → assume a foreground command.
+ */
+export function actionForShellStatus(entries: TranscriptEntry[]): NormalizedAction {
+  const last = entries[entries.length - 1];
+  if (last && toActivityEntry(last).category !== "shell") return "monitoring";
+  return "shell";
+}
+
 export interface ClaudeCodeProviderOptions {
   /**
    * Base dir for background-task output files
@@ -148,7 +161,7 @@ export class ClaudeCodeProvider implements AgentProvider {
 
     const currentAction: NormalizedAction =
       session.status === "shell"
-        ? "executing"
+        ? actionForShellStatus(recentTranscript)
         : session.status === "waiting"
           ? "waiting"
           : session.status === "idle"
