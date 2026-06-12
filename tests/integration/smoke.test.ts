@@ -56,8 +56,8 @@ describe("integration: full pipeline", () => {
     // 5. Derive current action
     const action = currentActionFromTranscript(entries);
     expect([
-      "thinking", "reading", "editing", "executing", "writing",
-      "delegating", "other", "waiting", "idle",
+      "thinking", "reading", "editing", "executing", "shell", "monitoring",
+      "writing", "delegating", "other", "waiting", "idle",
     ]).toContain(action);
 
     // 6. Test host app identification
