@@ -106,7 +106,9 @@ export function SidePanel() {
       case "thinking": return "Thinking...";
       case "reading": return "Using Read";
       case "editing": return "Using Edit";
-      case "executing": return "Using Bash";
+      case "executing": return "Running a tool";
+      case "shell": return "Running a shell command";
+      case "monitoring": return "Monitoring a process";
       case "writing": return "Writing response...";
       case "delegating": return "Using Agent";
       case "other": return "Using tool";
