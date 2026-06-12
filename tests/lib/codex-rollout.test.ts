@@ -28,11 +28,11 @@ describe("classifyCommand", () => {
     expect(classifyCommand("cat foo | apply_patch")).toBe("editing");
   });
 
-  it("classifies everything else as executing", () => {
-    expect(classifyCommand("npm test")).toBe("executing");
-    expect(classifyCommand("node script.js")).toBe("executing");
-    expect(classifyCommand("git push origin main")).toBe("executing");
-    expect(classifyCommand("./build.sh")).toBe("executing");
+  it("classifies everything else as shell", () => {
+    expect(classifyCommand("npm test")).toBe("shell");
+    expect(classifyCommand("node script.js")).toBe("shell");
+    expect(classifyCommand("git push origin main")).toBe("shell");
+    expect(classifyCommand("./build.sh")).toBe("shell");
   });
 });
 
@@ -41,17 +41,17 @@ describe("normalizeCodexAction", () => {
 
   it("maps v0.135 exec_command by classifying its cmd", () => {
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "exec_command", cmd: "ls" })).toBe("reading");
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "exec_command", cmd: "npm test" })).toBe("executing");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "exec_command", cmd: "npm test" })).toBe("shell");
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "exec_command", cmd: "apply_patch <<EOF" })).toBe("editing");
   });
 
   it("maps legacy shell by classifying its first command token", () => {
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "shell", cmd: "cat README.md" })).toBe("reading");
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "shell", cmd: "npm install" })).toBe("executing");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "shell", cmd: "npm install" })).toBe("shell");
   });
 
-  it("maps write_stdin to executing", () => {
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "write_stdin" })).toBe("executing");
+  it("maps write_stdin to shell", () => {
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "write_stdin" })).toBe("shell");
   });
 
   it("maps apply_patch tool to editing", () => {
@@ -64,8 +64,8 @@ describe("normalizeCodexAction", () => {
 
   it("maps unified_exec by classifying its cmd", () => {
     expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec", cmd: "cat foo.ts" })).toBe("reading");
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec", cmd: "npm test" })).toBe("executing");
-    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec" })).toBe("executing");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec", cmd: "npm test" })).toBe("shell");
+    expect(normalizeCodexAction({ ...base, kind: "function_call", name: "unified_exec" })).toBe("shell");
   });
 
   it("maps view_image and web_search to reading", () => {
@@ -242,9 +242,9 @@ describe("parseCodexRollout (against fixtures)", () => {
       "thinking",   // user prompt (turn boundary)
       "thinking",   // reasoning
       "reading",    // exec_command: ls -la
-      "executing",  // exec_command: npm test
+      "shell",      // exec_command: npm test
       "editing",    // exec_command: apply_patch
-      "executing",  // write_stdin
+      "shell",      // write_stdin
       "thinking",   // update_plan (planning)
       "writing",    // assistant message
     ]);
@@ -258,6 +258,6 @@ describe("parseCodexRollout (against fixtures)", () => {
     expect(entries[0].kind).toBe("user_message");
 
     const actions = entries.map(normalizeCodexAction);
-    expect(actions).toEqual(["thinking", "thinking", "reading", "executing", "writing"]);
+    expect(actions).toEqual(["thinking", "thinking", "reading", "shell", "writing"]);
   });
 });

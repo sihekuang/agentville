@@ -5,7 +5,7 @@ const READ_CMDS = new Set([
   "wc","awk","tree","stat","file","pwd","nl","du","which","cd","echo",
 ]);
 
-export function classifyCommand(cmd: string): "reading" | "executing" | "editing" {
+export function classifyCommand(cmd: string): "reading" | "shell" | "editing" {
   if (cmd.includes("apply_patch")) return "editing";
 
   const toks = cmd.split(/[\s;|&]+/).filter(Boolean);
@@ -17,10 +17,10 @@ export function classifyCommand(cmd: string): "reading" | "executing" | "editing
   if (first === "git") {
     const sub = meaningful[i + 1] ?? "";
     if (["diff", "log", "show", "status", "blame", "branch"].includes(sub)) return "reading";
-    return "executing";
+    return "shell";
   }
   if (READ_CMDS.has(first)) return "reading";
-  return "executing";
+  return "shell";
 }
 
 export type CodexEntry =
@@ -147,9 +147,9 @@ export function normalizeCodexAction(e: CodexEntry): NormalizedAction {
     case "exec_command":
     case "shell":
     case "unified_exec":
-      return e.cmd ? classifyCommand(e.cmd) : "executing";
+      return e.cmd ? classifyCommand(e.cmd) : "shell";
     case "write_stdin":
-      return "executing";
+      return "shell";
     case "apply_patch":
     case "patch":
       return "editing";
