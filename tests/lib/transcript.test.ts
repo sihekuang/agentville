@@ -286,7 +286,7 @@ describe("currentActionFromTranscript", () => {
   it("returns 'shell' for last Bash tool_use entry", () => {
     const action: NormalizedAction = currentActionFromTranscript([
       { timestamp: 1, type: "tool_use", summary: "Bash: npm test" },
-    ] as any);
+    ]);
     expect(action).toBe("shell");
   });
 

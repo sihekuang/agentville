@@ -205,6 +205,17 @@ describe("parseCodexRolloutLine", () => {
     expect(normalizeCodexAction(e)).toBe("reading");
   });
 
+  it("parses local_shell_call with a shell-class command into a shell action", () => {
+    const e = parseCodexRolloutLine(JSON.stringify({
+      timestamp: "2026-06-01T00:00:00Z", type: "response_item",
+      payload: { type: "local_shell_call", status: "completed", call_id: "c5",
+                 action: { type: "exec", command: ["bash", "-lc", "npm test"] } }
+    }))!;
+    expect(e).not.toBeNull();
+    expect((e as any).cmd).toBe("npm test");
+    expect(normalizeCodexAction(e)).toBe("shell");
+  });
+
   it("parses web_search_call into a reading action with the query", () => {
     const e = parseCodexRolloutLine(JSON.stringify({
       timestamp: "2026-06-01T00:00:00Z", type: "response_item",

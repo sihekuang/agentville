@@ -182,7 +182,7 @@ export class ClaudeCodeProvider implements AgentProvider {
       // Collapse session statuses to the Agent vocabulary: anything that isn't
       // "idle" is "busy" (the scene paints non-idle as working). The richer
       // session statuses survive in currentAction — "waiting" → ❓ and
-      // "shell" → ⚡ executing.
+      // "shell" → ❯_ shell (foreground command) or 👀 monitoring (background).
       status: session.status === "idle" ? "idle" : "busy",
       startedAt: session.startedAt,
       currentAction,
