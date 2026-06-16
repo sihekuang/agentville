@@ -1,4 +1,5 @@
-import { PIP_CONFIG } from "./pip-types";
+import { PIP_CONFIG, getElectronAPI } from "./pip-types";
+import type { ElectronPipAPI } from "./pip-types";
 
 /** Configuration for the PiP hover-to-expand feature. */
 export const PIP_EXPAND = {
@@ -27,4 +28,58 @@ export function clampExpandWidth(width: number): number {
 export function expandedSize(width: number): { width: number; height: number } {
   const w = clampExpandWidth(width);
   return { width: w, height: Math.round(w / PIP_EXPAND.ASPECT) };
+}
+
+/** Resizes the live PiP window. One implementation per backend. */
+export interface PipWindowResizer {
+  readonly name: string;
+  resize(width: number, height: number): void;
+}
+
+/** Electron: ask the main process (which owns the BrowserWindow) to resize. */
+export class ElectronPipWindowResizer implements PipWindowResizer {
+  readonly name = "electron";
+  resize(width: number, height: number): void {
+    getElectronAPI()?.pipResize(width, height);
+  }
+}
+
+/** Browser: the /pip content is an iframe whose parent IS the Document-PiP window. */
+export class BrowserPipWindowResizer implements PipWindowResizer {
+  readonly name = "browser";
+  constructor(private readonly target: Pick<Window, "resizeTo"> = window.parent) {}
+  resize(width: number, height: number): void {
+    try {
+      this.target.resizeTo(width, height);
+    } catch {
+      // Some browsers disallow resizeTo on a Document-PiP window; degrade to no-op.
+    }
+  }
+}
+
+export class NullPipWindowResizer implements PipWindowResizer {
+  readonly name = "none";
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  resize(_width: number, _height: number): void {}
+}
+
+export interface PipResizerEnv {
+  electronApi: ElectronPipAPI | null;
+  isIframed: boolean;
+}
+
+function defaultPipResizerEnv(): PipResizerEnv {
+  return {
+    electronApi: getElectronAPI(),
+    isIframed: typeof window !== "undefined" && window.parent !== window.self,
+  };
+}
+
+/** Pick the resizer appropriate to the current runtime. */
+export function detectPipResizer(
+  env: PipResizerEnv = defaultPipResizerEnv(),
+): PipWindowResizer {
+  if (env.electronApi) return new ElectronPipWindowResizer();
+  if (env.isIframed) return new BrowserPipWindowResizer();
+  return new NullPipWindowResizer();
 }

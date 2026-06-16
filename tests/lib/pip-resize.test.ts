@@ -1,9 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
   PIP_EXPAND,
   clampExpandWidth,
   expandedSize,
+  ElectronPipWindowResizer,
+  BrowserPipWindowResizer,
+  NullPipWindowResizer,
+  detectPipResizer,
 } from "@/lib/pip-resize";
+import type { ElectronPipAPI } from "@/lib/pip-types";
 
 describe("PIP_EXPAND", () => {
   it("has a default within the allowed range", () => {
@@ -46,5 +51,58 @@ describe("expandedSize", () => {
   });
   it("clamps the width before deriving height", () => {
     expect(expandedSize(100)).toEqual({ width: 500, height: 375 });
+  });
+});
+
+function mockElectronAPI(): ElectronPipAPI {
+  return {
+    pipActivate: vi.fn(),
+    pipDeactivate: vi.fn(),
+    pipFocusMain: vi.fn(),
+    pipResize: vi.fn(),
+    onPipActivated: vi.fn(() => () => {}),
+    onPipDeactivated: vi.fn(() => () => {}),
+  };
+}
+
+describe("ElectronPipWindowResizer", () => {
+  afterEach(() => {
+    delete (window as any).electronAPI;
+  });
+  it("calls electronAPI.pipResize", () => {
+    const api = mockElectronAPI();
+    (window as any).electronAPI = api;
+    new ElectronPipWindowResizer().resize(800, 600);
+    expect(api.pipResize).toHaveBeenCalledWith(800, 600);
+  });
+});
+
+describe("BrowserPipWindowResizer", () => {
+  it("calls resizeTo on the injected target", () => {
+    const target = { resizeTo: vi.fn() };
+    new BrowserPipWindowResizer(target).resize(800, 600);
+    expect(target.resizeTo).toHaveBeenCalledWith(800, 600);
+  });
+  it("swallows errors from resizeTo (degrades to no-op)", () => {
+    const target = { resizeTo: vi.fn(() => { throw new Error("blocked"); }) };
+    expect(() => new BrowserPipWindowResizer(target).resize(800, 600)).not.toThrow();
+  });
+});
+
+describe("NullPipWindowResizer", () => {
+  it("does nothing and does not throw", () => {
+    expect(() => new NullPipWindowResizer().resize(800, 600)).not.toThrow();
+  });
+});
+
+describe("detectPipResizer", () => {
+  it("returns Electron when an electron API is present", () => {
+    expect(detectPipResizer({ electronApi: mockElectronAPI(), isIframed: false }).name).toBe("electron");
+  });
+  it("returns Browser when iframed and no electron API", () => {
+    expect(detectPipResizer({ electronApi: null, isIframed: true }).name).toBe("browser");
+  });
+  it("returns Null when neither", () => {
+    expect(detectPipResizer({ electronApi: null, isIframed: false }).name).toBe("none");
   });
 });
