@@ -12,6 +12,7 @@ function makeMockElectronAPI(): ElectronPipAPI {
     pipActivate: vi.fn(),
     pipDeactivate: vi.fn(),
     pipFocusMain: vi.fn(),
+    pipResize: vi.fn(),
     onPipActivated: vi.fn(() => () => {}),
     onPipDeactivated: vi.fn(() => () => {}),
   };
