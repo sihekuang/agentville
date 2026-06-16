@@ -13,7 +13,7 @@ import { PIP_EXPAND } from "@/lib/pip-resize";
 
 function renderPanel(backend: PipBackendAdapter) {
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(PipProvider, { backend, children });
+    createElement(PipProvider, { backend }, children);
   return render(createElement(SidePanel), { wrapper });
 }
 
