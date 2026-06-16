@@ -48,4 +48,17 @@ describe("usePipHoverExpand", () => {
     fireMouse("mouseenter");
     expect(resizer.resize).not.toHaveBeenCalled();
   });
+
+  it("collapses to the resting size once when disabled while expanded", () => {
+    const resizer = makeResizer();
+    renderHook(() => usePipHoverExpand(resizer));
+    fireMouse("mouseenter");
+    expect(resizer.resize).toHaveBeenCalledWith(800, 600);
+    resizer.resize.mockClear();
+    // Turning the feature off while expanded should restore the resting size.
+    act(() => {
+      useAgentStore.setState({ pipHoverExpandEnabled: false });
+    });
+    expect(resizer.resize).toHaveBeenCalledExactlyOnceWith(400, 300);
+  });
 });
