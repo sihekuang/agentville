@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAgentStore } from "@/store/agents";
 import { usePipHoverExpand } from "@/hooks/usePipHoverExpand";
-import type { PipWindowResizer } from "@/lib/pip-resize";
+import { PIP_EXPAND, type PipWindowResizer } from "@/lib/pip-resize";
 
 function makeResizer() {
   return { name: "test", resize: vi.fn<(width: number, height: number) => void>() } satisfies PipWindowResizer;
@@ -37,7 +37,7 @@ describe("usePipHoverExpand", () => {
     resizer.resize.mockClear();
     fireMouse("mouseleave");
     expect(resizer.resize).not.toHaveBeenCalled(); // delayed
-    act(() => { vi.advanceTimersByTime(300); });
+    act(() => { vi.advanceTimersByTime(PIP_EXPAND.COLLAPSE_DELAY_MS + 1); });
     expect(resizer.resize).toHaveBeenCalledWith(400, 300);
   });
 
