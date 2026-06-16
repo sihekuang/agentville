@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import { ThemeProvider } from "./theme-provider";
 import { PipProvider } from "@/contexts/PipContext";
 import { detectBackend, type PipBackendAdapter } from "@/lib/pip-backend";
-import { useHydratePersistedTheme, useHydratePersistedIdleTimeout } from "@/store/agents";
+import { useHydratePersistedTheme, useHydratePersistedIdleTimeout, useHydratePersistedPipExpand } from "@/store/agents";
 
 export interface ProvidersProps {
   children: ReactNode;
@@ -14,6 +14,7 @@ export interface ProvidersProps {
 export function Providers({ children, pipBackend }: ProvidersProps) {
   useHydratePersistedTheme();
   useHydratePersistedIdleTimeout();
+  useHydratePersistedPipExpand();
   const backend = useMemo(() => pipBackend ?? detectBackend(), [pipBackend]);
 
   return (
