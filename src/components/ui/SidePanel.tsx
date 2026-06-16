@@ -113,9 +113,10 @@ export function SidePanel() {
                 />
                 Expand on hover
               </label>
-              <div className={pipHoverExpandEnabled ? "mt-3" : "mt-3 opacity-50"}>
-                <label className="block text-xs text-muted-foreground mb-1">Expanded size</label>
+              <div className={pipHoverExpandEnabled ? "mt-3" : "mt-3 opacity-50 pointer-events-none"}>
+                <label htmlFor="pip-expand-size" className="block text-xs text-muted-foreground mb-1">Expanded size</label>
                 <select
+                  id="pip-expand-size"
                   value={isCustom ? "custom" : String(pipExpandWidth)}
                   disabled={!pipHoverExpandEnabled}
                   onChange={(e) => {
