@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import path from "path";
+import { computeResizedBounds } from "./pip-bounds";
 
 const IPC = {
   PIP_ACTIVATE: "pip:activate",
@@ -7,6 +8,7 @@ const IPC = {
   PIP_FOCUS_MAIN: "pip:focus-main",
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
+  PIP_RESIZE: "pip:resize",
 } as const;
 
 const PIP_WIDTH = 400;
@@ -93,6 +95,14 @@ export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupO
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.close();
     }
+  });
+
+  ipcMain.on(IPC.PIP_RESIZE, (_e, payload: { width: number; height: number }) => {
+    if (!pipWindow || pipWindow.isDestroyed()) return;
+    const current = pipWindow.getBounds();
+    const { workArea } = screen.getDisplayMatching(current);
+    const next = computeResizedBounds(current, payload.width, payload.height, workArea);
+    pipWindow.setBounds(next);
   });
 }
 
