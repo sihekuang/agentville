@@ -4,8 +4,8 @@ import { useAgentStore } from "@/store/agents";
 import { usePipHoverExpand } from "@/hooks/usePipHoverExpand";
 import type { PipWindowResizer } from "@/lib/pip-resize";
 
-function makeResizer(): PipWindowResizer & { resize: ReturnType<typeof vi.fn> } {
-  return { name: "test", resize: vi.fn() };
+function makeResizer() {
+  return { name: "test", resize: vi.fn<(width: number, height: number) => void>() } satisfies PipWindowResizer;
 }
 
 function fireMouse(type: "mouseenter" | "mouseleave") {
