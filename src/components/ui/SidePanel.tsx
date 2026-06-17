@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAgentStore } from "@/store/agents";
 import { StatusBadge } from "./StatusBadge";
 import { ActionList } from "./ActionList";
@@ -32,8 +32,15 @@ export function SidePanel() {
   const setPipHoverExpandEnabled = useAgentStore((s) => s.setPipHoverExpandEnabled);
   const pipExpandWidth = useAgentStore((s) => s.pipExpandWidth);
   const setPipExpandWidth = useAgentStore((s) => s.setPipExpandWidth);
-  const { supported: pipSupported } = usePip();
+  const { backend: pipBackend } = usePip();
   const [pipForceCustom, setPipForceCustom] = useState(false);
+  // Hover-to-expand only works on the Electron backend: a browser Document-PiP
+  // window can only be resized with a user gesture, which hover/timers don't grant.
+  // The backend is detected client-side only, so defer until after mount to avoid a
+  // hydration mismatch (server renders nothing here; client may flip it on).
+  const pipHoverExpandSupported = pipBackend === "electron";
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [focusInfo, setFocusInfo] = useState<FocusDebugInfo | null>(null);
 
   const agent = selectedAgentId ? agents[selectedAgentId] : null;
@@ -96,7 +103,7 @@ export function SidePanel() {
             Treat an agent as idle after this long with no activity, even if it still reports busy.
           </p>
         </div>
-        {pipSupported && (() => {
+        {mounted && pipHoverExpandSupported && (() => {
           const isCustom = pipForceCustom || !PIP_EXPAND.PRESETS.some((p) => p.width === pipExpandWidth);
           const expanded = expandedSize(pipExpandWidth);
           return (

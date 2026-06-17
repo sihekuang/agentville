@@ -5,6 +5,7 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { PipProvider } from "@/contexts/PipContext";
 import {
   ElectronPipBackend,
+  BrowserPipBackend,
   NullPipBackend,
   type PipBackendAdapter,
 } from "@/lib/pip-backend";
@@ -29,12 +30,17 @@ describe("SidePanel PiP settings", () => {
     });
   });
 
-  it("hides the section when no PiP backend is supported", () => {
+  it("hides the section when there is no PiP backend", () => {
     renderPanel(new NullPipBackend());
     expect(screen.queryByText("Picture-in-Picture")).toBeNull();
   });
 
-  it("shows the section and toggles hover-expand when supported", () => {
+  it("hides the section for the browser backend (resize needs a user gesture there)", () => {
+    renderPanel(new BrowserPipBackend());
+    expect(screen.queryByText("Picture-in-Picture")).toBeNull();
+  });
+
+  it("shows the section and toggles hover-expand on Electron", () => {
     renderPanel(new ElectronPipBackend());
     expect(screen.getByText("Picture-in-Picture")).toBeDefined();
 

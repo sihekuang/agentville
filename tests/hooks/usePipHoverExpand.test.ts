@@ -24,7 +24,7 @@ describe("usePipHoverExpand", () => {
 
   it("expands to the configured size on mouseenter when enabled", () => {
     const resizer = makeResizer();
-    renderHook(() => usePipHoverExpand(resizer));
+    renderHook(() => usePipHoverExpand({ resizer }));
     fireMouse("mouseenter");
     expect(resizer.resize).toHaveBeenCalledWith(800, 600);
   });
@@ -32,7 +32,7 @@ describe("usePipHoverExpand", () => {
   it("collapses to the resting size after the delay on mouseleave", () => {
     vi.useFakeTimers();
     const resizer = makeResizer();
-    renderHook(() => usePipHoverExpand(resizer));
+    renderHook(() => usePipHoverExpand({ resizer }));
     fireMouse("mouseenter");
     resizer.resize.mockClear();
     fireMouse("mouseleave");
@@ -44,14 +44,14 @@ describe("usePipHoverExpand", () => {
   it("does not expand when disabled", () => {
     useAgentStore.setState({ pipHoverExpandEnabled: false });
     const resizer = makeResizer();
-    renderHook(() => usePipHoverExpand(resizer));
+    renderHook(() => usePipHoverExpand({ resizer }));
     fireMouse("mouseenter");
     expect(resizer.resize).not.toHaveBeenCalled();
   });
 
   it("collapses to the resting size once when disabled while expanded", () => {
     const resizer = makeResizer();
-    renderHook(() => usePipHoverExpand(resizer));
+    renderHook(() => usePipHoverExpand({ resizer }));
     fireMouse("mouseenter");
     expect(resizer.resize).toHaveBeenCalledWith(800, 600);
     resizer.resize.mockClear();
@@ -60,5 +60,27 @@ describe("usePipHoverExpand", () => {
       useAgentStore.setState({ pipHoverExpandEnabled: false });
     });
     expect(resizer.resize).toHaveBeenCalledExactlyOnceWith(400, 300);
+  });
+
+  it("triggers on the targetRef element, not the document", () => {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const targetRef = { current: el };
+    const resizer = makeResizer();
+    renderHook(() => usePipHoverExpand({ targetRef, resizer }));
+
+    // Hovering the document (e.g. the PiP top bar) must NOT expand.
+    act(() => {
+      document.documentElement.dispatchEvent(new MouseEvent("mouseenter"));
+    });
+    expect(resizer.resize).not.toHaveBeenCalled();
+
+    // Hovering the target element (the canvas region) expands.
+    act(() => {
+      el.dispatchEvent(new MouseEvent("mouseenter"));
+    });
+    expect(resizer.resize).toHaveBeenCalledWith(800, 600);
+
+    document.body.removeChild(el);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useAgentStore } from "@/store/agents";
 import { PIP_CONFIG } from "@/lib/pip-types";
 import {
@@ -9,13 +9,26 @@ import {
   expandedSize,
   type PipWindowResizer,
 } from "@/lib/pip-resize";
+import { pipDebug } from "@/lib/pip-debug";
+
+export interface UsePipHoverExpandOptions {
+  /**
+   * Element whose hover triggers the expand. Defaults to `document.documentElement`
+   * (the whole window). Pass a ref to the canvas region so hovering the PiP's
+   * top bar (drag handle / buttons) does NOT trigger a resize.
+   */
+  targetRef?: RefObject<HTMLElement | null>;
+  /** Inject a fake resizer in tests; defaults to the detected backend. */
+  resizer?: PipWindowResizer;
+}
 
 /**
- * Grows the PiP window while the cursor is over it and collapses it back when the
- * cursor leaves. Reads `pipHoverExpandEnabled` / `pipExpandWidth` from the store.
- * Pass a resizer to inject a fake in tests; defaults to the detected backend.
+ * Grows the PiP window while the cursor is over the trigger element and collapses
+ * it back when the cursor leaves. Reads `pipHoverExpandEnabled` / `pipExpandWidth`
+ * from the store.
  */
-export function usePipHoverExpand(injectedResizer?: PipWindowResizer): void {
+export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void {
+  const { targetRef, resizer: injectedResizer } = options;
   const enabled = useAgentStore((s) => s.pipHoverExpandEnabled);
   const width = useAgentStore((s) => s.pipExpandWidth);
   const resizer = useMemo(
@@ -26,7 +39,8 @@ export function usePipHoverExpand(injectedResizer?: PipWindowResizer): void {
   const isExpanded = useRef(false);
 
   useEffect(() => {
-    const root = document.documentElement;
+    const root: HTMLElement = targetRef?.current ?? document.documentElement;
+    pipDebug(`hook effect: enabled=${enabled} width=${width} resizer=${resizer.name}`);
 
     const clearTimer = () => {
       if (collapseTimer.current !== null) {
@@ -38,6 +52,7 @@ export function usePipHoverExpand(injectedResizer?: PipWindowResizer): void {
     const collapse = () => {
       if (!isExpanded.current) return;
       isExpanded.current = false;
+      pipDebug(`collapse → ${PIP_CONFIG.WIDTH}x${PIP_CONFIG.HEIGHT}`);
       resizer.resize(PIP_CONFIG.WIDTH, PIP_CONFIG.HEIGHT);
     };
 
@@ -53,11 +68,13 @@ export function usePipHoverExpand(injectedResizer?: PipWindowResizer): void {
       if (isExpanded.current) return;
       isExpanded.current = true;
       const size = expandedSize(width);
+      pipDebug(`expand → ${size.width}x${size.height}`);
       resizer.resize(size.width, size.height);
     };
 
     const scheduleCollapse = () => {
       clearTimer();
+      pipDebug("leave → collapse scheduled");
       collapseTimer.current = setTimeout(collapse, PIP_EXPAND.COLLAPSE_DELAY_MS);
     };
 
@@ -69,5 +86,5 @@ export function usePipHoverExpand(injectedResizer?: PipWindowResizer): void {
       root.removeEventListener("mouseenter", expand);
       root.removeEventListener("mouseleave", scheduleCollapse);
     };
-  }, [enabled, width, resizer]);
+  }, [enabled, width, resizer, targetRef]);
 }
