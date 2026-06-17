@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAgentStore } from "@/store/agents";
 import { StatusBadge } from "./StatusBadge";
 import { ActionList } from "./ActionList";
 import { ACTIVITY_LEGEND } from "./Header";
+import { usePip } from "@/hooks/usePip";
+import { PIP_CONFIG } from "@/lib/pip-types";
+import { PIP_EXPAND, expandedSize } from "@/lib/pip-resize";
 
 interface FocusDebugInfo {
   success: boolean;
@@ -25,6 +28,19 @@ export function SidePanel() {
   const selectAgent = useAgentStore((s) => s.selectAgent);
   const idleTimeoutMs = useAgentStore((s) => s.idleTimeoutMs);
   const setIdleTimeoutMs = useAgentStore((s) => s.setIdleTimeoutMs);
+  const pipHoverExpandEnabled = useAgentStore((s) => s.pipHoverExpandEnabled);
+  const setPipHoverExpandEnabled = useAgentStore((s) => s.setPipHoverExpandEnabled);
+  const pipExpandWidth = useAgentStore((s) => s.pipExpandWidth);
+  const setPipExpandWidth = useAgentStore((s) => s.setPipExpandWidth);
+  const { backend: pipBackend } = usePip();
+  const [pipForceCustom, setPipForceCustom] = useState(false);
+  // Hover-to-expand only works on the Electron backend: a browser Document-PiP
+  // window can only be resized with a user gesture, which hover/timers don't grant.
+  // The backend is detected client-side only, so defer until after mount to avoid a
+  // hydration mismatch (server renders nothing here; client may flip it on).
+  const pipHoverExpandSupported = pipBackend === "electron";
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [focusInfo, setFocusInfo] = useState<FocusDebugInfo | null>(null);
 
   const agent = selectedAgentId ? agents[selectedAgentId] : null;
@@ -87,6 +103,65 @@ export function SidePanel() {
             Treat an agent as idle after this long with no activity, even if it still reports busy.
           </p>
         </div>
+        {mounted && pipHoverExpandSupported && (() => {
+          const isCustom = pipForceCustom || !PIP_EXPAND.PRESETS.some((p) => p.width === pipExpandWidth);
+          const expanded = expandedSize(pipExpandWidth);
+          return (
+            <div className="p-4 border-t border-border">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                Picture-in-Picture
+              </h3>
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={pipHoverExpandEnabled}
+                  onChange={(e) => setPipHoverExpandEnabled(e.target.checked)}
+                  className="accent-primary"
+                />
+                Expand on hover
+              </label>
+              <div className={pipHoverExpandEnabled ? "mt-3" : "mt-3 opacity-50 pointer-events-none"}>
+                <label htmlFor="pip-expand-size" className="block text-xs text-muted-foreground mb-1">Expanded size</label>
+                <select
+                  id="pip-expand-size"
+                  value={isCustom ? "custom" : String(pipExpandWidth)}
+                  disabled={!pipHoverExpandEnabled}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setPipForceCustom(true);
+                    } else {
+                      setPipForceCustom(false);
+                      setPipExpandWidth(Number(e.target.value));
+                    }
+                  }}
+                  className="w-full text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+                >
+                  {PIP_EXPAND.PRESETS.map((p) => (
+                    <option key={p.width} value={p.width}>
+                      {p.label} ({p.width / PIP_CONFIG.WIDTH}×)
+                    </option>
+                  ))}
+                  <option value="custom">Custom…</option>
+                </select>
+                {isCustom && (
+                  <input
+                    type="number"
+                    min={PIP_EXPAND.MIN_WIDTH}
+                    max={PIP_EXPAND.MAX_WIDTH}
+                    step={50}
+                    value={pipExpandWidth}
+                    disabled={!pipHoverExpandEnabled}
+                    onChange={(e) => setPipExpandWidth(Number(e.target.value))}
+                    className="w-full mt-2 text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+                  />
+                )}
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  On hover the PiP window grows to {expanded.width} × {expanded.height}px. Leave to shrink back.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }

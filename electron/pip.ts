@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import path from "path";
+import { computeResizedBounds } from "./pip-bounds";
 
 const IPC = {
   PIP_ACTIVATE: "pip:activate",
@@ -7,6 +8,7 @@ const IPC = {
   PIP_FOCUS_MAIN: "pip:focus-main",
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
+  PIP_RESIZE: "pip:resize",
 } as const;
 
 const PIP_WIDTH = 400;
@@ -15,6 +17,12 @@ const PIP_MIN_WIDTH = 200;
 const PIP_MIN_HEIGHT = 150;
 const PIP_OFFSET = 20;
 const PIP_ROUTE = "/pip";
+
+// Flag-gated diagnostics — launch with `PIP_DEBUG=1` to enable (see src/lib/pip-debug.ts).
+const PIP_DEBUG = process.env.PIP_DEBUG === "1";
+function pipLog(...args: unknown[]) {
+  if (PIP_DEBUG) console.log("[pip]", ...args);
+}
 
 let pipWindow: BrowserWindow | null = null;
 
@@ -26,6 +34,7 @@ export interface PipSetupOptions {
 
 export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupOptions) {
   ipcMain.on(IPC.PIP_ACTIVATE, () => {
+    pipLog("PIP_ACTIVATE received");
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.focus();
       return;
@@ -93,6 +102,16 @@ export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupO
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.close();
     }
+  });
+
+  ipcMain.on(IPC.PIP_RESIZE, (_e, payload: { width: number; height: number }) => {
+    pipLog("PIP_RESIZE received:", JSON.stringify(payload), "live?", !!pipWindow && !pipWindow.isDestroyed());
+    if (!pipWindow || pipWindow.isDestroyed()) return;
+    const current = pipWindow.getBounds();
+    const { workArea } = screen.getDisplayMatching(current);
+    const next = computeResizedBounds(current, payload.width, payload.height, workArea);
+    pipLog("resize", JSON.stringify(current), "→", JSON.stringify(next));
+    pipWindow.setBounds(next);
   });
 }
 

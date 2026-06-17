@@ -24,6 +24,7 @@ describe("IPC constants", () => {
     expect(IPC.PIP_FOCUS_MAIN).toBe("pip:focus-main");
     expect(IPC.PIP_ACTIVATED).toBe("pip:activated");
     expect(IPC.PIP_DEACTIVATED).toBe("pip:deactivated");
+    expect(IPC.PIP_RESIZE).toBe("pip:resize");
   });
 
   it("all channel names are unique", () => {

@@ -1,0 +1,85 @@
+import { PIP_CONFIG, getElectronAPI } from "./pip-types";
+import type { ElectronPipAPI } from "./pip-types";
+
+/** Configuration for the PiP hover-to-expand feature. */
+export const PIP_EXPAND = {
+  DEFAULT_WIDTH: 800, // Medium / 2x of the resting width
+  MIN_WIDTH: 500, // 1.25x
+  MAX_WIDTH: 1600, // 4x
+  ASPECT: PIP_CONFIG.WIDTH / PIP_CONFIG.HEIGHT, // 400/300 = 4/3
+  COLLAPSE_DELAY_MS: 250,
+  PRESETS: [
+    { label: "Small", width: 600 },
+    { label: "Medium", width: 800 },
+    { label: "Large", width: 1000 },
+  ],
+} as const;
+
+/** Clamp an expanded width to the allowed range; NaN falls back to the default. */
+export function clampExpandWidth(width: number): number {
+  if (Number.isNaN(width)) return PIP_EXPAND.DEFAULT_WIDTH;
+  return Math.min(
+    PIP_EXPAND.MAX_WIDTH,
+    Math.max(PIP_EXPAND.MIN_WIDTH, Math.round(width)),
+  );
+}
+
+/** Given an expanded width, derive the 4:3 expanded size. */
+export function expandedSize(width: number): { width: number; height: number } {
+  const w = clampExpandWidth(width);
+  return { width: w, height: Math.round(w / PIP_EXPAND.ASPECT) };
+}
+
+/** Resizes the live PiP window. One implementation per backend. */
+export interface PipWindowResizer {
+  readonly name: string;
+  resize(width: number, height: number): void;
+}
+
+/** Electron: ask the main process (which owns the BrowserWindow) to resize. */
+export class ElectronPipWindowResizer implements PipWindowResizer {
+  readonly name = "electron";
+  resize(width: number, height: number): void {
+    getElectronAPI()?.pipResize(width, height);
+  }
+}
+
+/** Browser: the /pip content is an iframe whose parent IS the Document-PiP window. */
+export class BrowserPipWindowResizer implements PipWindowResizer {
+  readonly name = "browser";
+  constructor(private readonly target: Pick<Window, "resizeTo"> = window.parent) {}
+  resize(width: number, height: number): void {
+    try {
+      this.target.resizeTo(width, height);
+    } catch {
+      // Some browsers disallow resizeTo on a Document-PiP window; degrade to no-op.
+    }
+  }
+}
+
+export class NullPipWindowResizer implements PipWindowResizer {
+  readonly name = "none";
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  resize(_width: number, _height: number): void {}
+}
+
+export interface PipResizerEnv {
+  electronApi: ElectronPipAPI | null;
+  isIframed: boolean;
+}
+
+function defaultPipResizerEnv(): PipResizerEnv {
+  return {
+    electronApi: getElectronAPI(),
+    isIframed: typeof window !== "undefined" && window.parent !== window.self,
+  };
+}
+
+/** Pick the resizer appropriate to the current runtime. */
+export function detectPipResizer(
+  env: PipResizerEnv = defaultPipResizerEnv(),
+): PipWindowResizer {
+  if (env.electronApi) return new ElectronPipWindowResizer();
+  if (env.isIframed) return new BrowserPipWindowResizer();
+  return new NullPipWindowResizer();
+}

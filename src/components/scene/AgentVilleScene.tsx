@@ -92,7 +92,7 @@ function SceneContent({
   const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
 
   useEffect(() => {
-    if (!isInitialised || !containerRef.current || !innerRef.current) return;
+    if (!app || !isInitialised || !containerRef.current || !innerRef.current) return;
 
     if (viewportRef.current) {
       viewportRef.current.destroy({ children: false });

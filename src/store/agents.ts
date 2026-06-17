@@ -2,11 +2,14 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import type { Agent } from "@/lib/providers/types";
 import { DEFAULT_IDLE_TIMEOUT_MS } from "@/lib/idle-detection";
+import { clampExpandWidth, PIP_EXPAND } from "@/lib/pip-resize";
 
 export type Theme = "office" | "farm" | "workshop";
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["office", "farm", "workshop"]);
 const THEME_STORAGE_KEY = "agentville-theme";
 const IDLE_TIMEOUT_STORAGE_KEY = "agentville-idle-timeout";
+const PIP_HOVER_EXPAND_STORAGE_KEY = "agentville-pip-hover-expand";
+const PIP_EXPAND_WIDTH_STORAGE_KEY = "agentville-pip-expand-width";
 
 /** Alias kept for callers; identical shape to Agent */
 export type TrackedAgent = Agent;
@@ -16,6 +19,8 @@ interface AgentStore {
   selectedAgentId: string | null;
   theme: Theme;
   idleTimeoutMs: number;
+  pipHoverExpandEnabled: boolean;
+  pipExpandWidth: number;
 
   addAgent: (agent: Agent) => void;
   removeAgent: (id: string) => void;
@@ -23,6 +28,8 @@ interface AgentStore {
   selectAgent: (id: string | null) => void;
   setTheme: (theme: Theme) => void;
   setIdleTimeoutMs: (ms: number) => void;
+  setPipHoverExpandEnabled: (enabled: boolean) => void;
+  setPipExpandWidth: (width: number) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -30,6 +37,8 @@ export const useAgentStore = create<AgentStore>((set) => ({
   selectedAgentId: null,
   theme: "office",
   idleTimeoutMs: DEFAULT_IDLE_TIMEOUT_MS,
+  pipHoverExpandEnabled: false,
+  pipExpandWidth: PIP_EXPAND.DEFAULT_WIDTH,
 
   addAgent: (agent) =>
     set((state) => ({
@@ -61,6 +70,17 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setIdleTimeoutMs: (ms) => {
     set({ idleTimeoutMs: ms });
     try { localStorage.setItem(IDLE_TIMEOUT_STORAGE_KEY, String(ms)); } catch {}
+  },
+
+  setPipHoverExpandEnabled: (enabled) => {
+    set({ pipHoverExpandEnabled: enabled });
+    try { localStorage.setItem(PIP_HOVER_EXPAND_STORAGE_KEY, enabled ? "1" : "0"); } catch {}
+  },
+
+  setPipExpandWidth: (width) => {
+    const w = clampExpandWidth(width);
+    set({ pipExpandWidth: w });
+    try { localStorage.setItem(PIP_EXPAND_WIDTH_STORAGE_KEY, String(w)); } catch {}
   },
 }));
 
@@ -95,6 +115,25 @@ export function useHydratePersistedIdleTimeout(): void {
   }, []);
 }
 
+/** Rehydrate PiP hover-expand settings from localStorage after mount. */
+export function useHydratePersistedPipExpand(): void {
+  useEffect(() => {
+    try {
+      const enabled = localStorage.getItem(PIP_HOVER_EXPAND_STORAGE_KEY);
+      if (enabled !== null) {
+        useAgentStore.setState({ pipHoverExpandEnabled: enabled === "1" });
+      }
+      const width = localStorage.getItem(PIP_EXPAND_WIDTH_STORAGE_KEY);
+      if (width !== null) {
+        const n = Number(width);
+        if (Number.isFinite(n)) {
+          useAgentStore.setState({ pipExpandWidth: clampExpandWidth(n) });
+        }
+      }
+    } catch {}
+  }, []);
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key === THEME_STORAGE_KEY && e.newValue && VALID_THEMES.has(e.newValue)) {
@@ -104,6 +143,15 @@ if (typeof window !== "undefined") {
       const n = Number(e.newValue);
       if (Number.isFinite(n) && n >= 0) {
         useAgentStore.setState({ idleTimeoutMs: n });
+      }
+    }
+    if (e.key === PIP_HOVER_EXPAND_STORAGE_KEY && e.newValue !== null) {
+      useAgentStore.setState({ pipHoverExpandEnabled: e.newValue === "1" });
+    }
+    if (e.key === PIP_EXPAND_WIDTH_STORAGE_KEY && e.newValue !== null) {
+      const n = Number(e.newValue);
+      if (Number.isFinite(n)) {
+        useAgentStore.setState({ pipExpandWidth: clampExpandWidth(n) });
       }
     }
   });

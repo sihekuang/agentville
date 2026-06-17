@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useAgentStore } from "@/store/agents";
 import type { Agent } from "@/lib/providers/types";
 import { DEFAULT_IDLE_TIMEOUT_MS } from "@/lib/idle-detection";
+import { PIP_EXPAND } from "@/lib/pip-resize";
 
 const makeAgent = (overrides?: Partial<Agent>): Agent => ({
   id: "claude-code:abc-123",
@@ -92,5 +93,50 @@ describe("idleTimeoutMs store slice", () => {
     useAgentStore.getState().setIdleTimeoutMs(0);
     expect(useAgentStore.getState().idleTimeoutMs).toBe(0);
     expect(localStorage.getItem("agentville-idle-timeout")).toBe("0");
+  });
+});
+
+describe("PiP hover-expand store slice", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useAgentStore.setState({
+      pipHoverExpandEnabled: false,
+      pipExpandWidth: PIP_EXPAND.DEFAULT_WIDTH,
+    });
+  });
+
+  it("defaults to disabled with the default width", () => {
+    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(false);
+    expect(useAgentStore.getState().pipExpandWidth).toBe(PIP_EXPAND.DEFAULT_WIDTH);
+  });
+
+  it("setPipHoverExpandEnabled persists '1'/'0'", () => {
+    useAgentStore.getState().setPipHoverExpandEnabled(true);
+    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(true);
+    expect(localStorage.getItem("agentville-pip-hover-expand")).toBe("1");
+
+    useAgentStore.getState().setPipHoverExpandEnabled(false);
+    expect(localStorage.getItem("agentville-pip-hover-expand")).toBe("0");
+  });
+
+  it("setPipExpandWidth clamps and persists", () => {
+    useAgentStore.getState().setPipExpandWidth(1000);
+    expect(useAgentStore.getState().pipExpandWidth).toBe(1000);
+    expect(localStorage.getItem("agentville-pip-expand-width")).toBe("1000");
+
+    useAgentStore.getState().setPipExpandWidth(99999);
+    expect(useAgentStore.getState().pipExpandWidth).toBe(PIP_EXPAND.MAX_WIDTH);
+  });
+
+  it("syncs from a cross-window storage event", () => {
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "agentville-pip-hover-expand", newValue: "1" }),
+    );
+    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(true);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "agentville-pip-expand-width", newValue: "600" }),
+    );
+    expect(useAgentStore.getState().pipExpandWidth).toBe(600);
   });
 });

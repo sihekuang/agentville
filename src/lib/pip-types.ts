@@ -14,12 +14,14 @@ export const IPC = {
   PIP_FOCUS_MAIN: "pip:focus-main",
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
+  PIP_RESIZE: "pip:resize",
 } as const;
 
 export interface ElectronPipAPI {
   pipActivate: () => void;
   pipDeactivate: () => void;
   pipFocusMain: () => void;
+  pipResize: (width: number, height: number) => void;
   onPipActivated: (callback: () => void) => () => void;
   onPipDeactivated: (callback: () => void) => () => void;
 }
