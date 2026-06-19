@@ -9,6 +9,9 @@ import {
   detectPipResizer,
   PIP_HOVER,
   pipHoverAction,
+  ElectronPipCursorProbe,
+  NullPipCursorProbe,
+  detectPipCursorProbe,
 } from "@/lib/pip-resize";
 import type { ElectronPipAPI } from "@/lib/pip-types";
 
@@ -62,6 +65,7 @@ function mockElectronAPI(): ElectronPipAPI {
     pipDeactivate: vi.fn(),
     pipFocusMain: vi.fn(),
     pipResize: vi.fn(),
+    pipCursorBeyond: vi.fn(),
     onPipActivated: vi.fn(() => () => {}),
     onPipDeactivated: vi.fn(() => () => {}),
   };
@@ -148,5 +152,32 @@ describe("pipHoverAction", () => {
 
   it("exposes the default inset as 32", () => {
     expect(PIP_HOVER.EXPAND_INSET).toBe(32);
+  });
+});
+
+describe("detectPipCursorProbe", () => {
+  it("returns Electron when an electron API is present", () => {
+    expect(detectPipCursorProbe({ electronApi: mockElectronAPI(), isIframed: false }).name).toBe("electron");
+  });
+  it("returns Null when there is no electron API", () => {
+    expect(detectPipCursorProbe({ electronApi: null, isIframed: true }).name).toBe("none");
+    expect(detectPipCursorProbe({ electronApi: null, isIframed: false }).name).toBe("none");
+  });
+});
+
+describe("NullPipCursorProbe", () => {
+  it("resolves true (collapse on leave)", async () => {
+    await expect(new NullPipCursorProbe().isBeyond(60)).resolves.toBe(true);
+  });
+});
+
+describe("ElectronPipCursorProbe", () => {
+  afterEach(() => { delete (window as any).electronAPI; });
+  it("delegates to electronAPI.pipCursorBeyond with the outset", async () => {
+    const api = mockElectronAPI();
+    (api.pipCursorBeyond as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+    (window as any).electronAPI = api;
+    await expect(new ElectronPipCursorProbe().isBeyond(60)).resolves.toBe(true);
+    expect(api.pipCursorBeyond).toHaveBeenCalledWith(60);
   });
 });

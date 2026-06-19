@@ -9,6 +9,7 @@ const IPC = {
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
+  PIP_CURSOR_BEYOND: "pip:cursor-beyond",
 } as const;
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -17,6 +18,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   pipFocusMain: () => ipcRenderer.send(IPC.PIP_FOCUS_MAIN),
   pipResize: (width: number, height: number) =>
     ipcRenderer.send(IPC.PIP_RESIZE, { width, height }),
+  pipCursorBeyond: (outset: number) => ipcRenderer.invoke(IPC.PIP_CURSOR_BEYOND, outset),
   onPipActivated: (callback: () => void) => {
     const handler = () => callback();
     ipcRenderer.on(IPC.PIP_ACTIVATED, handler);

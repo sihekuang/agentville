@@ -18,6 +18,10 @@ export const PIP_EXPAND = {
 export const PIP_HOVER = {
   /** Pixels the cursor must travel past the collapsed edge before expanding. */
   EXPAND_INSET: 32,
+  /** Pixels the cursor must travel past the expanded window before collapsing. */
+  COLLAPSE_OUTSET: 60,
+  /** Poll cadence (ms) for the cursor-beyond check while the cursor is outside the window. */
+  COLLAPSE_POLL_MS: 80,
 } as const;
 
 /**
@@ -113,4 +117,35 @@ export function detectPipResizer(
   if (env.electronApi) return new ElectronPipWindowResizer();
   if (env.isIframed) return new BrowserPipWindowResizer();
   return new NullPipWindowResizer();
+}
+
+/** Queries whether the global cursor is more than `outset` px outside the PiP window. */
+export interface PipCursorProbe {
+  readonly name: string;
+  isBeyond(outset: number): Promise<boolean>;
+}
+
+/** Electron: only the main process can read the global cursor + window bounds. */
+export class ElectronPipCursorProbe implements PipCursorProbe {
+  readonly name = "electron";
+  isBeyond(outset: number): Promise<boolean> {
+    const api = getElectronAPI();
+    return api ? api.pipCursorBeyond(outset) : Promise.resolve(true);
+  }
+}
+
+/** Non-Electron: no global cursor → any leave collapses (old behavior). */
+export class NullPipCursorProbe implements PipCursorProbe {
+  readonly name = "none";
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  isBeyond(_outset: number): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+}
+
+/** Pick the cursor probe appropriate to the current runtime. */
+export function detectPipCursorProbe(
+  env: PipResizerEnv = defaultPipResizerEnv(),
+): PipCursorProbe {
+  return env.electronApi ? new ElectronPipCursorProbe() : new NullPipCursorProbe();
 }

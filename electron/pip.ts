@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import path from "path";
-import { computeResizedBounds } from "./pip-bounds";
+import { computeResizedBounds, isCursorBeyond } from "./pip-bounds";
 
 const IPC = {
   PIP_ACTIVATE: "pip:activate",
@@ -9,6 +9,7 @@ const IPC = {
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
+  PIP_CURSOR_BEYOND: "pip:cursor-beyond",
 } as const;
 
 const PIP_WIDTH = 400;
@@ -112,6 +113,11 @@ export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupO
     const next = computeResizedBounds(current, payload.width, payload.height, workArea);
     pipLog("resize", JSON.stringify(current), "→", JSON.stringify(next));
     pipWindow.setBounds(next);
+  });
+
+  ipcMain.handle(IPC.PIP_CURSOR_BEYOND, (_e, outset: number): boolean => {
+    if (!pipWindow || pipWindow.isDestroyed()) return true; // gone → allow collapse
+    return isCursorBeyond(screen.getCursorScreenPoint(), pipWindow.getBounds(), outset);
   });
 }
 
