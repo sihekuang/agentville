@@ -19,7 +19,7 @@ export const PIP_HOVER = {
   /** Pixels the cursor must travel past the collapsed edge before expanding. */
   EXPAND_INSET: 32,
   /** Pixels the cursor must travel past the expanded window before collapsing. */
-  COLLAPSE_OUTSET: 60,
+  COLLAPSE_OUTSET: 40,
   /** Poll cadence (ms) for the cursor-beyond check while the cursor is outside the window. */
   COLLAPSE_POLL_MS: 80,
 } as const;
