@@ -1,53 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAgentStore } from "@/store/agents";
 import { PIP_CONFIG } from "@/lib/pip-types";
 import {
-  PIP_EXPAND,
   detectPipResizer,
   expandedSize,
+  pipHoverAction,
   type PipWindowResizer,
 } from "@/lib/pip-resize";
 import { pipDebug } from "@/lib/pip-debug";
 
 export interface UsePipHoverExpandOptions {
-  /**
-   * Element whose hover triggers the expand. Defaults to `document.documentElement`
-   * (the whole window). Pass a ref to the canvas region so hovering the PiP's
-   * top bar (drag handle / buttons) does NOT trigger a resize.
-   */
-  targetRef?: RefObject<HTMLElement | null>;
   /** Inject a fake resizer in tests; defaults to the detected backend. */
   resizer?: PipWindowResizer;
 }
 
 /**
- * Grows the PiP window while the cursor is over the trigger element and collapses
- * it back when the cursor leaves. Reads `pipHoverExpandEnabled` / `pipExpandWidth`
- * from the store.
+ * Grows the PiP window with hysteresis: it expands once the cursor reaches the
+ * inner core of the collapsed window (a 32px inset), and collapses only once the
+ * cursor leaves the whole expanded window. The separated thresholds make the
+ * size sticky, so no collapse-debounce timer is needed. Reads
+ * `pipHoverExpandEnabled` / `pipExpandWidth` from the store.
  */
 export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void {
-  const { targetRef, resizer: injectedResizer } = options;
+  const { resizer: injectedResizer } = options;
   const enabled = useAgentStore((s) => s.pipHoverExpandEnabled);
   const width = useAgentStore((s) => s.pipExpandWidth);
   const resizer = useMemo(
     () => injectedResizer ?? detectPipResizer(),
     [injectedResizer],
   );
-  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isExpanded = useRef(false);
 
   useEffect(() => {
-    const root: HTMLElement = targetRef?.current ?? document.documentElement;
+    const root = document.documentElement;
+    const collapsed = { width: PIP_CONFIG.WIDTH, height: PIP_CONFIG.HEIGHT };
     pipDebug(`hook effect: enabled=${enabled} width=${width} resizer=${resizer.name}`);
-
-    const clearTimer = () => {
-      if (collapseTimer.current !== null) {
-        clearTimeout(collapseTimer.current);
-        collapseTimer.current = null;
-      }
-    };
 
     const collapse = () => {
       if (!isExpanded.current) return;
@@ -58,13 +47,11 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
 
     if (!enabled) {
       // Feature off: ensure resting size, then attach no listeners.
-      clearTimer();
       collapse();
       return;
     }
 
     const expand = () => {
-      clearTimer();
       if (isExpanded.current) return;
       isExpanded.current = true;
       const size = expandedSize(width);
@@ -72,19 +59,24 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
       resizer.resize(size.width, size.height);
     };
 
-    const scheduleCollapse = () => {
-      clearTimer();
-      pipDebug("leave → collapse scheduled");
-      collapseTimer.current = setTimeout(collapse, PIP_EXPAND.COLLAPSE_DELAY_MS);
+    const onMove = (e: PointerEvent) => {
+      if (pipHoverAction({ x: e.clientX, y: e.clientY }, isExpanded.current, collapsed) === "expand") {
+        expand();
+      }
     };
 
-    root.addEventListener("mouseenter", expand);
-    root.addEventListener("mouseleave", scheduleCollapse);
+    const onLeave = () => {
+      if (pipHoverAction(null, isExpanded.current, collapsed) === "collapse") {
+        collapse();
+      }
+    };
+
+    root.addEventListener("pointermove", onMove);
+    root.addEventListener("pointerleave", onLeave);
 
     return () => {
-      clearTimer();
-      root.removeEventListener("mouseenter", expand);
-      root.removeEventListener("mouseleave", scheduleCollapse);
+      root.removeEventListener("pointermove", onMove);
+      root.removeEventListener("pointerleave", onLeave);
     };
-  }, [enabled, width, resizer, targetRef]);
+  }, [enabled, width, resizer]);
 }

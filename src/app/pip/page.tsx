@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
 import { usePip } from "@/hooks/usePip";
@@ -17,8 +17,7 @@ const AgentVilleScene = dynamic(
 
 export default function PipPage() {
   useAgentStream();
-  const hoverTriggerRef = useRef<HTMLDivElement>(null);
-  usePipHoverExpand({ targetRef: hoverTriggerRef });
+  usePipHoverExpand();
   const { backend, focusMain } = usePip();
   const [isElectron, setIsElectron] = useState(false);
   useEffect(() => setIsElectron(backend === "electron"), [backend]);
@@ -53,10 +52,7 @@ export default function PipPage() {
           </div>
         </>
       )}
-      <div
-        ref={hoverTriggerRef}
-        className={`w-full h-full ${isElectron ? "pt-5" : ""}`}
-      >
+      <div className={`w-full h-full ${isElectron ? "pt-5" : ""}`}>
         <AgentVilleScene isPip />
       </div>
     </div>
