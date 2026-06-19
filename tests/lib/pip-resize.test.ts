@@ -7,6 +7,8 @@ import {
   BrowserPipWindowResizer,
   NullPipWindowResizer,
   detectPipResizer,
+  PIP_HOVER,
+  pipHoverAction,
 } from "@/lib/pip-resize";
 import type { ElectronPipAPI } from "@/lib/pip-types";
 
@@ -104,5 +106,47 @@ describe("detectPipResizer", () => {
   });
   it("returns Null when neither", () => {
     expect(detectPipResizer({ electronApi: null, isIframed: false }).name).toBe("none");
+  });
+});
+
+describe("pipHoverAction", () => {
+  const collapsed = { width: 400, height: 300 }; // center (200,150)
+
+  it("expands when collapsed and the pointer is in the core", () => {
+    expect(pipHoverAction({ x: 200, y: 150 }, false, collapsed)).toBe("expand");
+  });
+
+  it("does not expand when the pointer is only in the inset margin ring", () => {
+    // x=8 → dx=192 > ex(168): inside the window but not the 336x236 core
+    expect(pipHoverAction({ x: 8, y: 150 }, false, collapsed)).toBe("none");
+  });
+
+  it("treats the core boundary as inclusive", () => {
+    // corner of the core: dx=168 (=200-32), dy=118 (=150-32)
+    expect(pipHoverAction({ x: 368, y: 268 }, false, collapsed)).toBe("expand");
+    // one pixel past → none
+    expect(pipHoverAction({ x: 369, y: 268 }, false, collapsed)).toBe("none");
+  });
+
+  it("returns none when collapsed and the pointer has left the window", () => {
+    expect(pipHoverAction(null, false, collapsed)).toBe("none");
+  });
+
+  it("collapses when expanded and the pointer has left the window", () => {
+    expect(pipHoverAction(null, true, collapsed)).toBe("collapse");
+  });
+
+  it("stays expanded while the pointer is anywhere inside the window", () => {
+    expect(pipHoverAction({ x: 5, y: 5 }, true, collapsed)).toBe("none");
+  });
+
+  it("respects a custom inset", () => {
+    // (90,150): dx=110. Default inset 32 → expand; inset 100 → ex=100 → none.
+    expect(pipHoverAction({ x: 90, y: 150 }, false, collapsed)).toBe("expand");
+    expect(pipHoverAction({ x: 90, y: 150 }, false, collapsed, 100)).toBe("none");
+  });
+
+  it("exposes the default inset as 32", () => {
+    expect(PIP_HOVER.EXPAND_INSET).toBe(32);
   });
 });

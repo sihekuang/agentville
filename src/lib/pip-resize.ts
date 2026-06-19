@@ -7,13 +7,44 @@ export const PIP_EXPAND = {
   MIN_WIDTH: 500, // 1.25x
   MAX_WIDTH: 1600, // 4x
   ASPECT: PIP_CONFIG.WIDTH / PIP_CONFIG.HEIGHT, // 400/300 = 4/3
-  COLLAPSE_DELAY_MS: 250,
   PRESETS: [
     { label: "Small", width: 600 },
     { label: "Medium", width: 800 },
     { label: "Large", width: 1000 },
   ],
 } as const;
+
+/** Hover-expand hysteresis constant. */
+export const PIP_HOVER = {
+  /** Pixels the cursor must travel past the collapsed edge before expanding. */
+  EXPAND_INSET: 32,
+} as const;
+
+/**
+ * Decide the next hover action from the cursor's position within the PiP window.
+ *
+ * `pointer` is window-relative (top-left origin), or `null` when the cursor has
+ * left the window entirely. `collapsed` is the resting window size; while
+ * collapsed the window *is* that size, so the center test uses it directly.
+ *
+ * - collapsed + pointer inside the core (collapsed box inset by `inset`) → "expand"
+ * - expanded + pointer gone (null)                                       → "collapse"
+ * - everything else                                                      → "none"
+ */
+export function pipHoverAction(
+  pointer: { x: number; y: number } | null,
+  expanded: boolean,
+  collapsed: { width: number; height: number },
+  inset: number = PIP_HOVER.EXPAND_INSET,
+): "expand" | "collapse" | "none" {
+  if (expanded) return pointer === null ? "collapse" : "none";
+  if (pointer === null) return "none";
+  const dx = Math.abs(pointer.x - collapsed.width / 2);
+  const dy = Math.abs(pointer.y - collapsed.height / 2);
+  const ex = collapsed.width / 2 - inset;
+  const ey = collapsed.height / 2 - inset;
+  return dx <= ex && dy <= ey ? "expand" : "none";
+}
 
 /** Clamp an expanded width to the allowed range; NaN falls back to the default. */
 export function clampExpandWidth(width: number): number {
