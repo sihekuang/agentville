@@ -31,3 +31,17 @@ export function computeResizedBounds(
 
   return { x, y, width, height };
 }
+
+/** True when the cursor is more than `outset` px outside the window on any side. */
+export function isCursorBeyond(
+  cursor: { x: number; y: number },
+  bounds: Bounds,
+  outset: number,
+): boolean {
+  return (
+    cursor.x < bounds.x - outset ||
+    cursor.x > bounds.x + bounds.width + outset ||
+    cursor.y < bounds.y - outset ||
+    cursor.y > bounds.y + bounds.height + outset
+  );
+}

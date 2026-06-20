@@ -15,6 +15,7 @@ export const IPC = {
   PIP_ACTIVATED: "pip:activated",
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
+  PIP_CURSOR_BEYOND: "pip:cursor-beyond",
 } as const;
 
 export interface ElectronPipAPI {
@@ -22,6 +23,7 @@ export interface ElectronPipAPI {
   pipDeactivate: () => void;
   pipFocusMain: () => void;
   pipResize: (width: number, height: number) => void;
+  pipCursorBeyond: (outset: number) => Promise<boolean>;
   onPipActivated: (callback: () => void) => () => void;
   onPipDeactivated: (callback: () => void) => () => void;
 }

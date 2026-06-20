@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeResizedBounds } from "../../electron/pip-bounds";
+import { computeResizedBounds, isCursorBeyond } from "../../electron/pip-bounds";
 
 const workArea = { x: 0, y: 0, width: 1440, height: 900 };
 
@@ -38,5 +38,36 @@ describe("computeResizedBounds", () => {
     expect(next.x).toBeGreaterThanOrEqual(secondary.x);
     expect(next.x + next.width).toBeLessThanOrEqual(secondary.x + secondary.width);
     expect(next.y + next.height).toBeLessThanOrEqual(secondary.y + secondary.height);
+  });
+});
+
+describe("isCursorBeyond", () => {
+  // window covers x∈[100,900], y∈[100,700]; outset 60 → boundary x∈[40,960], y∈[40,760]
+  const bounds = { x: 100, y: 100, width: 800, height: 600 };
+  const outset = 60;
+
+  it("is false when the cursor is inside the window", () => {
+    expect(isCursorBeyond({ x: 500, y: 400 }, bounds, outset)).toBe(false);
+  });
+
+  it("is false within the outset buffer past an edge", () => {
+    expect(isCursorBeyond({ x: 940, y: 400 }, bounds, outset)).toBe(false); // right buffer
+    expect(isCursorBeyond({ x: 60, y: 400 }, bounds, outset)).toBe(false);  // left buffer
+  });
+
+  it("is true more than outset past the left/right edges", () => {
+    expect(isCursorBeyond({ x: 961, y: 400 }, bounds, outset)).toBe(true);
+    expect(isCursorBeyond({ x: 39, y: 400 }, bounds, outset)).toBe(true);
+  });
+
+  it("is true more than outset past the top/bottom edges", () => {
+    expect(isCursorBeyond({ x: 500, y: 39 }, bounds, outset)).toBe(true);
+    expect(isCursorBeyond({ x: 500, y: 761 }, bounds, outset)).toBe(true);
+  });
+
+  it("respects a second-display (non-zero origin) window", () => {
+    const secondary = { x: 1440, y: 0, width: 800, height: 600 };
+    expect(isCursorBeyond({ x: 1800, y: 300 }, secondary, 60)).toBe(false);
+    expect(isCursorBeyond({ x: 1440 + 800 + 61, y: 300 }, secondary, 60)).toBe(true);
   });
 });
