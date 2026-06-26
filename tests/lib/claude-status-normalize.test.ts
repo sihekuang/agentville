@@ -71,12 +71,31 @@ describe("actionForShellStatus", () => {
     expect(actionForShellStatus([at("text", "done"), bash])).toBe("shell");
   });
 
-  it("is 'monitoring' when the newest entry is a turn-final reply (background process)", () => {
+  it("is 'shell' when the newest entry is a turn-final reply (status outranks a lagging transcript)", () => {
     const bash = { timestamp: 1, type: "tool_use", summary: "Bash: npm run dev:full &" } as TranscriptEntry;
-    expect(actionForShellStatus([bash, at("text", "started it")])).toBe("monitoring");
+    expect(actionForShellStatus([bash, at("text", "started it")])).toBe("shell");
   });
 
-  it("is 'monitoring' when the newest entry is thinking", () => {
-    expect(actionForShellStatus([at("thinking")])).toBe("monitoring");
+  it("is 'shell' when the newest entry is thinking", () => {
+    expect(actionForShellStatus([at("thinking")])).toBe("shell");
+  });
+
+  it("is 'shell' when status is fresh but the transcript tail is a stale reply", () => {
+    // Live repro: the session status flips to "shell" for a new foreground
+    // command BEFORE the transcript records it (the transcript file lags the
+    // status file by minutes). The newest parseable entry is then the PREVIOUS
+    // turn's text reply — a non-shell tail that must NOT be read as monitoring.
+    const bash = { timestamp: 1, type: "tool_use", summary: "Bash: npm test" } as TranscriptEntry;
+    expect(actionForShellStatus([bash, at("text", "Good — that passed")])).toBe("shell");
+  });
+
+  it("is 'monitoring' only when the agent is actively polling live output", () => {
+    const bashOutput = {
+      timestamp: 1,
+      type: "tool_use",
+      summary: "BashOutput",
+      toolName: "BashOutput",
+    } as TranscriptEntry;
+    expect(actionForShellStatus([bashOutput])).toBe("monitoring");
   });
 });
