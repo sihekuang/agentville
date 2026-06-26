@@ -34,9 +34,6 @@ export default function PipPage() {
           <div
             className="absolute top-1 right-1 z-20 flex gap-1"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            // Keep click-to-expand from firing on the control buttons (avoids an
-            // expand→collapse flash when clicking ↩/×, which then blur/close the window).
-            onPointerDown={(e) => e.stopPropagation()}
           >
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"

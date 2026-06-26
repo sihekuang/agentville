@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useAgentStore } from "@/store/agents";
-import { PIP_CONFIG } from "@/lib/pip-types";
+import { PIP_CONFIG, PIP_EXPAND_REQUEST_EVENT } from "@/lib/pip-types";
 import {
   PIP_HOVER,
   detectPipResizer,
@@ -93,16 +93,20 @@ export function usePipExpand(options: UsePipExpandOptions = {}): void {
     }
 
     if (trigger === "click") {
-      const onDown = () => {
+      // Expand only when the scene reports an empty-canvas press — NOT on a raw
+      // document pointerdown. Clicking an agent (double-click → focus) or a DOM
+      // control button must not resize the window mid-gesture, so those never
+      // emit PIP_EXPAND_REQUEST_EVENT (see AgentVilleScene's background hit layer).
+      const onExpandRequest = () => {
         if (!isExpanded.current) expand();
       };
       const onBlur = () => {
         if (isExpanded.current) collapse(); // window lost focus → user clicked outside
       };
-      root.addEventListener("pointerdown", onDown);
+      window.addEventListener(PIP_EXPAND_REQUEST_EVENT, onExpandRequest);
       window.addEventListener("blur", onBlur);
       return () => {
-        root.removeEventListener("pointerdown", onDown);
+        window.removeEventListener(PIP_EXPAND_REQUEST_EVENT, onExpandRequest);
         window.removeEventListener("blur", onBlur);
         if (isExpanded.current) collapse(); // don't orphan a large window on mode switch
       };

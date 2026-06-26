@@ -40,3 +40,11 @@ export function getElectronAPI(): ElectronPipAPI | null {
 }
 
 export type PipBackend = "electron" | "browser";
+
+/**
+ * Window event the scene dispatches when the **empty canvas** (not an agent
+ * sprite, not a DOM button) is pressed in the PiP window. Click-mode expand
+ * listens for this instead of a raw document pointerdown, so clicking an agent
+ * (double-click → focus) or a control button never resizes the window mid-gesture.
+ */
+export const PIP_EXPAND_REQUEST_EVENT = "agentville:pip-expand-request";
