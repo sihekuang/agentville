@@ -170,11 +170,13 @@ export function SidePanel() {
                     className="w-full mt-2 text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
                   />
                 )}
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  {pipExpandTrigger === "click"
-                    ? `On click the PiP window grows to ${expanded.width} × ${expanded.height}px. Click outside to shrink back.`
-                    : `On hover the PiP window grows to ${expanded.width} × ${expanded.height}px. Leave to shrink back.`}
-                </p>
+                {triggerActive && (
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    {pipExpandTrigger === "click"
+                      ? `On click the PiP window grows to ${expanded.width} × ${expanded.height}px. Click outside to shrink back.`
+                      : `On hover the PiP window grows to ${expanded.width} × ${expanded.height}px. Leave to shrink back.`}
+                  </p>
+                )}
               </div>
             </div>
           );
