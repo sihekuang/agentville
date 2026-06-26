@@ -54,15 +54,20 @@ export function toActivityEntry(entry: TranscriptEntry): ActivityEntry {
 }
 
 /**
- * Resolve `currentAction` for a Claude session whose status is "shell" (a
- * process is live). If the newest transcript entry is itself a shell command
- * the agent is running it in the foreground → "shell". If the newest entry is
- * anything else, the turn has moved on and a BACKGROUND shell is keeping the
- * status pinned → "monitoring". No transcript → assume a foreground command.
+ * Resolve `currentAction` for a Claude session whose status is "shell" (Claude
+ * Code asserts a shell command is executing right now). This status is fresh
+ * and authoritative, but the transcript FILE lags it — the assistant message
+ * carrying the command's tool_use isn't flushed until the turn streams, so
+ * during a fresh or long foreground command the newest parseable entry is
+ * still the PREVIOUS turn's thinking/text/read. A non-shell tail therefore does
+ * NOT mean the command finished, so we default to "shell". Only surface
+ * "monitoring" when the newest entry is itself a monitoring tool
+ * (BashOutput/Monitor/TaskOutput) — i.e. the agent is actively polling live
+ * output. No transcript → a command is asserted running → "shell".
  */
 export function actionForShellStatus(entries: TranscriptEntry[]): NormalizedAction {
   const last = entries[entries.length - 1];
-  if (last && toActivityEntry(last).category !== "shell") return "monitoring";
+  if (last && toActivityEntry(last).category === "monitoring") return "monitoring";
   return "shell";
 }
 
