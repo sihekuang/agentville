@@ -6,9 +6,13 @@ import { clampExpandWidth, PIP_EXPAND } from "@/lib/pip-resize";
 
 export type Theme = "office" | "farm" | "workshop";
 const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["office", "farm", "workshop"]);
+
+export type PipExpandTrigger = "off" | "hover" | "click";
+const VALID_PIP_TRIGGERS: ReadonlySet<string> = new Set<PipExpandTrigger>(["off", "hover", "click"]);
 const THEME_STORAGE_KEY = "agentville-theme";
 const IDLE_TIMEOUT_STORAGE_KEY = "agentville-idle-timeout";
-const PIP_HOVER_EXPAND_STORAGE_KEY = "agentville-pip-hover-expand";
+const PIP_EXPAND_TRIGGER_STORAGE_KEY = "agentville-pip-expand-trigger";
+const PIP_HOVER_EXPAND_STORAGE_KEY = "agentville-pip-hover-expand"; // legacy: read once at hydrate for migration
 const PIP_EXPAND_WIDTH_STORAGE_KEY = "agentville-pip-expand-width";
 
 /** Alias kept for callers; identical shape to Agent */
@@ -19,7 +23,7 @@ interface AgentStore {
   selectedAgentId: string | null;
   theme: Theme;
   idleTimeoutMs: number;
-  pipHoverExpandEnabled: boolean;
+  pipExpandTrigger: PipExpandTrigger;
   pipExpandWidth: number;
 
   addAgent: (agent: Agent) => void;
@@ -28,7 +32,7 @@ interface AgentStore {
   selectAgent: (id: string | null) => void;
   setTheme: (theme: Theme) => void;
   setIdleTimeoutMs: (ms: number) => void;
-  setPipHoverExpandEnabled: (enabled: boolean) => void;
+  setPipExpandTrigger: (mode: PipExpandTrigger) => void;
   setPipExpandWidth: (width: number) => void;
 }
 
@@ -37,7 +41,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
   selectedAgentId: null,
   theme: "office",
   idleTimeoutMs: DEFAULT_IDLE_TIMEOUT_MS,
-  pipHoverExpandEnabled: false,
+  pipExpandTrigger: "off",
   pipExpandWidth: PIP_EXPAND.DEFAULT_WIDTH,
 
   addAgent: (agent) =>
@@ -72,9 +76,9 @@ export const useAgentStore = create<AgentStore>((set) => ({
     try { localStorage.setItem(IDLE_TIMEOUT_STORAGE_KEY, String(ms)); } catch {}
   },
 
-  setPipHoverExpandEnabled: (enabled) => {
-    set({ pipHoverExpandEnabled: enabled });
-    try { localStorage.setItem(PIP_HOVER_EXPAND_STORAGE_KEY, enabled ? "1" : "0"); } catch {}
+  setPipExpandTrigger: (mode) => {
+    set({ pipExpandTrigger: mode });
+    try { localStorage.setItem(PIP_EXPAND_TRIGGER_STORAGE_KEY, mode); } catch {}
   },
 
   setPipExpandWidth: (width) => {
@@ -115,13 +119,21 @@ export function useHydratePersistedIdleTimeout(): void {
   }, []);
 }
 
-/** Rehydrate PiP hover-expand settings from localStorage after mount. */
+/** Rehydrate PiP expand settings from localStorage after mount (with legacy key migration). */
 export function useHydratePersistedPipExpand(): void {
   useEffect(() => {
     try {
-      const enabled = localStorage.getItem(PIP_HOVER_EXPAND_STORAGE_KEY);
-      if (enabled !== null) {
-        useAgentStore.setState({ pipHoverExpandEnabled: enabled === "1" });
+      const trigger = localStorage.getItem(PIP_EXPAND_TRIGGER_STORAGE_KEY);
+      if (trigger !== null && VALID_PIP_TRIGGERS.has(trigger)) {
+        useAgentStore.setState({ pipExpandTrigger: trigger as PipExpandTrigger });
+      } else {
+        // Migrate the legacy boolean key, then write the new key so it stops mattering.
+        const legacy = localStorage.getItem(PIP_HOVER_EXPAND_STORAGE_KEY);
+        if (legacy !== null) {
+          const migrated: PipExpandTrigger = legacy === "1" ? "hover" : "off";
+          useAgentStore.setState({ pipExpandTrigger: migrated });
+          try { localStorage.setItem(PIP_EXPAND_TRIGGER_STORAGE_KEY, migrated); } catch {}
+        }
       }
       const width = localStorage.getItem(PIP_EXPAND_WIDTH_STORAGE_KEY);
       if (width !== null) {
@@ -145,8 +157,12 @@ if (typeof window !== "undefined") {
         useAgentStore.setState({ idleTimeoutMs: n });
       }
     }
-    if (e.key === PIP_HOVER_EXPAND_STORAGE_KEY && e.newValue !== null) {
-      useAgentStore.setState({ pipHoverExpandEnabled: e.newValue === "1" });
+    if (
+      e.key === PIP_EXPAND_TRIGGER_STORAGE_KEY &&
+      e.newValue !== null &&
+      VALID_PIP_TRIGGERS.has(e.newValue)
+    ) {
+      useAgentStore.setState({ pipExpandTrigger: e.newValue as PipExpandTrigger });
     }
     if (e.key === PIP_EXPAND_WIDTH_STORAGE_KEY && e.newValue !== null) {
       const n = Number(e.newValue);

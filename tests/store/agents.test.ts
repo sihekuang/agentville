@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useAgentStore } from "@/store/agents";
+import { renderHook } from "@testing-library/react";
+import { useAgentStore, useHydratePersistedPipExpand } from "@/store/agents";
 import type { Agent } from "@/lib/providers/types";
 import { DEFAULT_IDLE_TIMEOUT_MS } from "@/lib/idle-detection";
 import { PIP_EXPAND } from "@/lib/pip-resize";
@@ -96,27 +97,27 @@ describe("idleTimeoutMs store slice", () => {
   });
 });
 
-describe("PiP hover-expand store slice", () => {
+describe("PiP expand-trigger store slice", () => {
   beforeEach(() => {
     localStorage.clear();
     useAgentStore.setState({
-      pipHoverExpandEnabled: false,
+      pipExpandTrigger: "off",
       pipExpandWidth: PIP_EXPAND.DEFAULT_WIDTH,
     });
   });
 
-  it("defaults to disabled with the default width", () => {
-    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(false);
+  it("defaults to 'off' with the default width", () => {
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("off");
     expect(useAgentStore.getState().pipExpandWidth).toBe(PIP_EXPAND.DEFAULT_WIDTH);
   });
 
-  it("setPipHoverExpandEnabled persists '1'/'0'", () => {
-    useAgentStore.getState().setPipHoverExpandEnabled(true);
-    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(true);
-    expect(localStorage.getItem("agentville-pip-hover-expand")).toBe("1");
+  it("setPipExpandTrigger updates state and persists the mode string", () => {
+    useAgentStore.getState().setPipExpandTrigger("click");
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("click");
+    expect(localStorage.getItem("agentville-pip-expand-trigger")).toBe("click");
 
-    useAgentStore.getState().setPipHoverExpandEnabled(false);
-    expect(localStorage.getItem("agentville-pip-hover-expand")).toBe("0");
+    useAgentStore.getState().setPipExpandTrigger("hover");
+    expect(localStorage.getItem("agentville-pip-expand-trigger")).toBe("hover");
   });
 
   it("setPipExpandWidth clamps and persists", () => {
@@ -128,15 +129,43 @@ describe("PiP hover-expand store slice", () => {
     expect(useAgentStore.getState().pipExpandWidth).toBe(PIP_EXPAND.MAX_WIDTH);
   });
 
-  it("syncs from a cross-window storage event", () => {
+  it("syncs the trigger from a cross-window storage event", () => {
     window.dispatchEvent(
-      new StorageEvent("storage", { key: "agentville-pip-hover-expand", newValue: "1" }),
+      new StorageEvent("storage", { key: "agentville-pip-expand-trigger", newValue: "click" }),
     );
-    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(true);
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("click");
 
     window.dispatchEvent(
       new StorageEvent("storage", { key: "agentville-pip-expand-width", newValue: "600" }),
     );
     expect(useAgentStore.getState().pipExpandWidth).toBe(600);
+  });
+
+  it("ignores an invalid trigger from a storage event", () => {
+    useAgentStore.getState().setPipExpandTrigger("hover");
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "agentville-pip-expand-trigger", newValue: "bogus" }),
+    );
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("hover");
+  });
+
+  it("migrates the legacy hover key on hydrate ('1' → 'hover') and writes the new key", () => {
+    localStorage.setItem("agentville-pip-hover-expand", "1");
+    renderHook(() => useHydratePersistedPipExpand());
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("hover");
+    expect(localStorage.getItem("agentville-pip-expand-trigger")).toBe("hover");
+  });
+
+  it("migrates the legacy hover key '0' → 'off'", () => {
+    localStorage.setItem("agentville-pip-hover-expand", "0");
+    renderHook(() => useHydratePersistedPipExpand());
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("off");
+  });
+
+  it("prefers the new trigger key over the legacy key", () => {
+    localStorage.setItem("agentville-pip-hover-expand", "1");
+    localStorage.setItem("agentville-pip-expand-trigger", "click");
+    renderHook(() => useHydratePersistedPipExpand());
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("click");
   });
 });
