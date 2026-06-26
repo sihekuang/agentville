@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAgentStore } from "@/store/agents";
-import { usePipHoverExpand } from "@/hooks/usePipHoverExpand";
+import { usePipExpand } from "@/hooks/usePipExpand";
 import { PIP_HOVER, type PipWindowResizer, type PipCursorProbe } from "@/lib/pip-resize";
 
 function makeResizer() {
@@ -27,16 +27,26 @@ function firePointer(type: "pointerleave" | "pointerenter") {
     document.documentElement.dispatchEvent(new MouseEvent(type));
   });
 }
+function firePointerDown() {
+  act(() => {
+    document.documentElement.dispatchEvent(new MouseEvent("pointerdown"));
+  });
+}
+function fireWindowBlur() {
+  act(() => {
+    window.dispatchEvent(new Event("blur"));
+  });
+}
 
-describe("usePipHoverExpand", () => {
+describe("usePipExpand — hover mode", () => {
   beforeEach(() => {
-    useAgentStore.setState({ pipHoverExpandEnabled: true, pipExpandWidth: 800 });
+    useAgentStore.setState({ pipExpandTrigger: "hover", pipExpandWidth: 800 });
   });
 
   it("expands to the configured size when the pointer reaches the core", () => {
     const resizer = makeResizer();
     const { probe } = makeProbe();
-    renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
     firePointerMove(200, 150);
     expect(resizer.resize).toHaveBeenCalledWith(800, 600);
   });
@@ -44,7 +54,7 @@ describe("usePipHoverExpand", () => {
   it("does not expand while the pointer is only in the inset margin ring", () => {
     const resizer = makeResizer();
     const { probe } = makeProbe();
-    renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
     firePointerMove(8, 150);
     expect(resizer.resize).not.toHaveBeenCalled();
   });
@@ -54,7 +64,7 @@ describe("usePipHoverExpand", () => {
     try {
       const resizer = makeResizer();
       const { probe, state } = makeProbe(false); // inside the buffer
-      renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
+      renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
       firePointerMove(200, 150);                 // expand
       expect(resizer.resize).toHaveBeenCalledWith(800, 600);
       resizer.resize.mockClear();
@@ -74,7 +84,7 @@ describe("usePipHoverExpand", () => {
     try {
       const resizer = makeResizer();
       const { probe, state } = makeProbe(false);
-      renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
+      renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
       firePointerMove(200, 150);                 // expand
       resizer.resize.mockClear();
       firePointer("pointerleave");               // start watch
@@ -92,7 +102,7 @@ describe("usePipHoverExpand", () => {
     try {
       const resizer = makeResizer();
       const { probe } = makeProbe(true);         // e.g. non-Electron NullPipCursorProbe
-      renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
+      renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
       firePointerMove(200, 150);
       resizer.resize.mockClear();
       firePointer("pointerleave");
@@ -102,26 +112,84 @@ describe("usePipHoverExpand", () => {
       vi.useRealTimers();
     }
   });
+});
 
-  it("does not expand when disabled", () => {
-    useAgentStore.setState({ pipHoverExpandEnabled: false });
+describe("usePipExpand — click mode", () => {
+  beforeEach(() => {
+    useAgentStore.setState({ pipExpandTrigger: "click", pipExpandWidth: 800 });
+  });
+
+  it("expands on a click anywhere inside the window", () => {
     const resizer = makeResizer();
     const { probe } = makeProbe();
-    renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
-    firePointerMove(200, 150);
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerDown();
+    expect(resizer.resize).toHaveBeenCalledWith(800, 600);
+  });
+
+  it("collapses when the window loses focus (click outside)", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerDown();             // expand
+    resizer.resize.mockClear();
+    fireWindowBlur();              // clicked outside → collapse
+    expect(resizer.resize).toHaveBeenCalledWith(400, 300);
+  });
+
+  it("stays expanded on a second inside click (click-out collapses, not a toggle)", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerDown();             // expand
+    resizer.resize.mockClear();
+    firePointerDown();             // still inside → no change
     expect(resizer.resize).not.toHaveBeenCalled();
   });
 
-  it("collapses to the resting size once when disabled while expanded", () => {
+  it("ignores blur while collapsed", () => {
     const resizer = makeResizer();
     const { probe } = makeProbe();
-    renderHook(() => usePipHoverExpand({ resizer, cursorProbe: probe }));
-    firePointerMove(200, 150);
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    fireWindowBlur();
+    expect(resizer.resize).not.toHaveBeenCalled();
+  });
+
+  it("collapses when switching away from click while expanded (no orphaned window)", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerDown();             // expand under click mode
     expect(resizer.resize).toHaveBeenCalledWith(800, 600);
     resizer.resize.mockClear();
-    act(() => {
-      useAgentStore.setState({ pipHoverExpandEnabled: false });
-    });
+    act(() => { useAgentStore.setState({ pipExpandTrigger: "off" }); });
+    expect(resizer.resize).toHaveBeenCalledExactlyOnceWith(400, 300);
+  });
+});
+
+describe("usePipExpand — off mode", () => {
+  beforeEach(() => {
+    useAgentStore.setState({ pipExpandTrigger: "off", pipExpandWidth: 800 });
+  });
+
+  it("does not expand on hover or click", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerMove(200, 150);
+    firePointerDown();
+    expect(resizer.resize).not.toHaveBeenCalled();
+  });
+
+  it("collapses to the resting size once when switched to off while expanded (via hover)", () => {
+    useAgentStore.setState({ pipExpandTrigger: "hover" });
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    firePointerMove(200, 150);     // expand under hover
+    expect(resizer.resize).toHaveBeenCalledWith(800, 600);
+    resizer.resize.mockClear();
+    act(() => { useAgentStore.setState({ pipExpandTrigger: "off" }); });
     expect(resizer.resize).toHaveBeenCalledExactlyOnceWith(400, 300);
   });
 });

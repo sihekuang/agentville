@@ -14,7 +14,7 @@ import {
 } from "@/lib/pip-resize";
 import { pipDebug } from "@/lib/pip-debug";
 
-export interface UsePipHoverExpandOptions {
+export interface UsePipExpandOptions {
   /** Inject a fake resizer in tests; defaults to the detected backend. */
   resizer?: PipWindowResizer;
   /** Inject a fake cursor probe in tests; defaults to the detected backend. */
@@ -22,18 +22,25 @@ export interface UsePipHoverExpandOptions {
 }
 
 /**
- * Grows the PiP window with hysteresis. It expands once the cursor reaches the
- * inner core of the collapsed window (a 32px inset). It collapses only once the
- * cursor travels past the expanded window by COLLAPSE_OUTSET px — measured by the
- * Electron main process through `cursorProbe`, since the renderer cannot see the
- * cursor outside its own window. While the cursor sits in that buffer ring the
- * window stays expanded. Polling runs only while the cursor is outside the window
- * (between pointerleave and pointerenter). Reads `pipHoverExpandEnabled` /
- * `pipExpandWidth` from the store.
+ * Grows the PiP window according to the selected trigger mode
+ * (`pipExpandTrigger`: "off" | "hover" | "click"):
+ *
+ * - "off": never auto-expands; ensures the resting size and attaches no listeners.
+ * - "hover": expands once the cursor reaches the inner core of the collapsed
+ *   window (a 32px inset) and collapses only once the cursor travels past the
+ *   expanded window by COLLAPSE_OUTSET px — measured by the Electron main process
+ *   through `cursorProbe`, since the renderer cannot see the cursor outside its
+ *   own window. Polling runs only while the cursor is outside the window.
+ * - "click": expands on any pointerdown inside the window and collapses when the
+ *   window loses focus (the user clicks outside it) via the DOM `window` blur
+ *   event — no cursor polling.
+ *
+ * On teardown (mode switch) an expanded window is collapsed so it is never
+ * orphaned at the large size. Reads `pipExpandTrigger` / `pipExpandWidth`.
  */
-export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void {
+export function usePipExpand(options: UsePipExpandOptions = {}): void {
   const { resizer: injectedResizer, cursorProbe: injectedProbe } = options;
-  const enabled = useAgentStore((s) => s.pipHoverExpandEnabled);
+  const trigger = useAgentStore((s) => s.pipExpandTrigger);
   const width = useAgentStore((s) => s.pipExpandWidth);
   const resizer = useMemo(
     () => injectedResizer ?? detectPipResizer(),
@@ -51,7 +58,7 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
     const root = document.documentElement;
     const collapsed = { width: PIP_CONFIG.WIDTH, height: PIP_CONFIG.HEIGHT };
     pipDebug(
-      `hook effect: enabled=${enabled} width=${width} resizer=${resizer.name} probe=${cursorProbe.name}`,
+      `hook effect: trigger=${trigger} width=${width} resizer=${resizer.name} probe=${cursorProbe.name}`,
     );
 
     const stopWatch = () => {
@@ -70,12 +77,6 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
       resizer.resize(PIP_CONFIG.WIDTH, PIP_CONFIG.HEIGHT);
     };
 
-    if (!enabled) {
-      // Feature off: ensure resting size, then attach no listeners.
-      collapse();
-      return;
-    }
-
     const expand = () => {
       stopWatch();
       if (isExpanded.current) return;
@@ -85,6 +86,29 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
       resizer.resize(size.width, size.height);
     };
 
+    if (trigger === "off") {
+      // Feature off: ensure resting size, then attach no listeners.
+      collapse();
+      return;
+    }
+
+    if (trigger === "click") {
+      const onDown = () => {
+        if (!isExpanded.current) expand();
+      };
+      const onBlur = () => {
+        if (isExpanded.current) collapse(); // window lost focus → user clicked outside
+      };
+      root.addEventListener("pointerdown", onDown);
+      window.addEventListener("blur", onBlur);
+      return () => {
+        root.removeEventListener("pointerdown", onDown);
+        window.removeEventListener("blur", onBlur);
+        if (isExpanded.current) collapse(); // don't orphan a large window on mode switch
+      };
+    }
+
+    // trigger === "hover"
     const startWatch = () => {
       if (pollTimer.current !== null) return; // already watching
       const gen = ++watchGen.current;
@@ -119,6 +143,7 @@ export function usePipHoverExpand(options: UsePipHoverExpandOptions = {}): void 
       root.removeEventListener("pointermove", onMove);
       root.removeEventListener("pointerleave", onLeave);
       root.removeEventListener("pointerenter", onEnter);
+      if (isExpanded.current) collapse(); // don't orphan a large window on mode switch
     };
-  }, [enabled, width, resizer, cursorProbe]);
+  }, [trigger, width, resizer, cursorProbe]);
 }

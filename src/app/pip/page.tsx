@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAgentStream } from "@/hooks/use-agent-stream";
 import { usePip } from "@/hooks/usePip";
-import { usePipHoverExpand } from "@/hooks/usePipHoverExpand";
+import { usePipExpand } from "@/hooks/usePipExpand";
 import { PipHoverDebug } from "@/components/ui/PipHoverDebug";
 
 const AgentVilleScene = dynamic(
@@ -17,7 +17,7 @@ const AgentVilleScene = dynamic(
 
 export default function PipPage() {
   useAgentStream();
-  usePipHoverExpand();
+  usePipExpand();
   const { backend, focusMain } = usePip();
   const [isElectron, setIsElectron] = useState(false);
   useEffect(() => setIsElectron(backend === "electron"), [backend]);
