@@ -28,17 +28,17 @@ export function SidePanel() {
   const selectAgent = useAgentStore((s) => s.selectAgent);
   const idleTimeoutMs = useAgentStore((s) => s.idleTimeoutMs);
   const setIdleTimeoutMs = useAgentStore((s) => s.setIdleTimeoutMs);
-  const pipHoverExpandEnabled = useAgentStore((s) => s.pipHoverExpandEnabled);
-  const setPipHoverExpandEnabled = useAgentStore((s) => s.setPipHoverExpandEnabled);
+  const pipExpandTrigger = useAgentStore((s) => s.pipExpandTrigger);
+  const setPipExpandTrigger = useAgentStore((s) => s.setPipExpandTrigger);
   const pipExpandWidth = useAgentStore((s) => s.pipExpandWidth);
   const setPipExpandWidth = useAgentStore((s) => s.setPipExpandWidth);
   const { backend: pipBackend } = usePip();
   const [pipForceCustom, setPipForceCustom] = useState(false);
-  // Hover-to-expand only works on the Electron backend: a browser Document-PiP
-  // window can only be resized with a user gesture, which hover/timers don't grant.
+  // Expand-on-interaction only works on the Electron backend: a browser Document-PiP
+  // window can only be resized with a user gesture, which hover/click timers don't grant.
   // The backend is detected client-side only, so defer until after mount to avoid a
   // hydration mismatch (server renders nothing here; client may flip it on).
-  const pipHoverExpandSupported = pipBackend === "electron";
+  const pipExpandSupported = pipBackend === "electron";
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [focusInfo, setFocusInfo] = useState<FocusDebugInfo | null>(null);
@@ -103,29 +103,44 @@ export function SidePanel() {
             Treat an agent as idle after this long with no activity, even if it still reports busy.
           </p>
         </div>
-        {mounted && pipHoverExpandSupported && (() => {
+        {mounted && pipExpandSupported && (() => {
           const isCustom = pipForceCustom || !PIP_EXPAND.PRESETS.some((p) => p.width === pipExpandWidth);
           const expanded = expandedSize(pipExpandWidth);
+          const triggerActive = pipExpandTrigger !== "off";
+          const TRIGGERS = [
+            { value: "off", label: "Off" },
+            { value: "hover", label: "Hover" },
+            { value: "click", label: "Click" },
+          ] as const;
           return (
             <div className="p-4 border-t border-border">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                 Picture-in-Picture
               </h3>
-              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={pipHoverExpandEnabled}
-                  onChange={(e) => setPipHoverExpandEnabled(e.target.checked)}
-                  className="accent-primary"
-                />
-                Expand on hover
-              </label>
-              <div className={pipHoverExpandEnabled ? "mt-3" : "mt-3 opacity-50 pointer-events-none"}>
+              <fieldset>
+                <legend className="block text-xs text-muted-foreground mb-1">Expand PiP on</legend>
+                <div className="flex flex-col gap-1.5">
+                  {TRIGGERS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="radio"
+                        name="pip-expand-trigger"
+                        value={opt.value}
+                        checked={pipExpandTrigger === opt.value}
+                        onChange={() => setPipExpandTrigger(opt.value)}
+                        className="accent-primary"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <div className={triggerActive ? "mt-3" : "mt-3 opacity-50 pointer-events-none"}>
                 <label htmlFor="pip-expand-size" className="block text-xs text-muted-foreground mb-1">Expanded size</label>
                 <select
                   id="pip-expand-size"
                   value={isCustom ? "custom" : String(pipExpandWidth)}
-                  disabled={!pipHoverExpandEnabled}
+                  disabled={!triggerActive}
                   onChange={(e) => {
                     if (e.target.value === "custom") {
                       setPipForceCustom(true);
@@ -150,13 +165,15 @@ export function SidePanel() {
                     max={PIP_EXPAND.MAX_WIDTH}
                     step={50}
                     value={pipExpandWidth}
-                    disabled={!pipHoverExpandEnabled}
+                    disabled={!triggerActive}
                     onChange={(e) => setPipExpandWidth(Number(e.target.value))}
                     className="w-full mt-2 text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
                   />
                 )}
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  On hover the PiP window grows to {expanded.width} × {expanded.height}px. Leave to shrink back.
+                  {pipExpandTrigger === "click"
+                    ? `On click the PiP window grows to ${expanded.width} × ${expanded.height}px. Click outside to shrink back.`
+                    : `On hover the PiP window grows to ${expanded.width} × ${expanded.height}px. Leave to shrink back.`}
                 </p>
               </div>
             </div>

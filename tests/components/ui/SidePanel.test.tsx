@@ -25,7 +25,7 @@ describe("SidePanel PiP settings", () => {
     useAgentStore.setState({
       agents: {},
       selectedAgentId: null,
-      pipHoverExpandEnabled: false,
+      pipExpandTrigger: "off",
       pipExpandWidth: PIP_EXPAND.DEFAULT_WIDTH,
     });
   });
@@ -40,15 +40,26 @@ describe("SidePanel PiP settings", () => {
     expect(screen.queryByText("Picture-in-Picture")).toBeNull();
   });
 
-  it("shows the section and toggles hover-expand on Electron", () => {
+  it("shows the section and selects an expand trigger on Electron", () => {
     renderPanel(new ElectronPipBackend());
     expect(screen.getByText("Picture-in-Picture")).toBeDefined();
 
-    const checkbox = screen.getByLabelText("Expand on hover") as HTMLInputElement;
-    expect(checkbox.checked).toBe(false);
+    const off = screen.getByLabelText("Off") as HTMLInputElement;
+    const click = screen.getByLabelText("Click") as HTMLInputElement;
+    const hover = screen.getByLabelText("Hover") as HTMLInputElement;
+    expect(off.checked).toBe(true);
+    expect(click.checked).toBe(false);
+    expect(hover.checked).toBe(false);
 
-    fireEvent.click(checkbox);
-    expect(useAgentStore.getState().pipHoverExpandEnabled).toBe(true);
-    expect(localStorage.getItem("agentville-pip-hover-expand")).toBe("1");
+    const size = screen.getByLabelText("Expanded size") as HTMLSelectElement;
+    expect(size.disabled).toBe(true); // off → size controls disabled
+
+    fireEvent.click(click);
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("click");
+    expect(localStorage.getItem("agentville-pip-expand-trigger")).toBe("click");
+    expect(size.disabled).toBe(false);
+
+    fireEvent.click(hover);
+    expect(useAgentStore.getState().pipExpandTrigger).toBe("hover");
   });
 });
