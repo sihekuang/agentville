@@ -10,6 +10,10 @@ import type { AgentAnimationConfig } from "./themes/theme-types";
 
 extend({ AnimatedSprite, Container, Text, Graphics });
 
+/** Pixi `label` on each agent's root container, so the scene can tell an agent
+ * press apart from an empty-canvas press (PiP click-to-expand). */
+export const AGENT_SPRITE_LABEL = "agentville-agent-sprite";
+
 interface AgentSpriteProps {
   x: number;
   y: number;
@@ -297,6 +301,7 @@ export function AgentSprite({
   return (
     <pixiContainer
       ref={containerRef}
+      label={AGENT_SPRITE_LABEL}
       x={x}
       y={y}
       eventMode="static"

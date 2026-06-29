@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Container, Rectangle, type Texture } from "pixi.js";
+import { Container, type FederatedPointerEvent, type Texture } from "pixi.js";
 import { Application, extend, useApplication } from "@pixi/react";
 import { Viewport } from "pixi-viewport";
 import { useTheme } from "next-themes";
 import { useAgentStore, type TrackedAgent } from "@/store/agents";
 import { usePip } from "@/hooks/usePip";
-import { PIP_EXPAND_REQUEST_EVENT } from "@/lib/pip-types";
+import { PIP_EXPAND_REQUEST_EVENT, PIP_SUPPRESS_COLLAPSE_EVENT } from "@/lib/pip-types";
 import { useNow } from "@/hooks/use-now";
 import { useLoadTexture } from "./use-animation-frames";
 import { Tilemap } from "./Tilemap";
-import { AgentSprite } from "./AgentSprite";
+import { AgentSprite, AGENT_SPRITE_LABEL } from "./AgentSprite";
 import { isLongRunningState } from "@/lib/long-running";
 import { officeTheme } from "./themes/office";
 import { farmTheme } from "./themes/farm";
@@ -94,16 +94,6 @@ function SceneContent({
   const worldW = dynamicTheme.gridCols * dynamicTheme.tileSize;
   const worldH = dynamicTheme.gridRows * dynamicTheme.tileSize;
 
-  // Empty-canvas hit layer (PiP only): a world-sized, transparent hit area that
-  // sits UNDER the agent sprites. Pressing empty canvas/floor hits it and asks
-  // the PiP window to expand; pressing an agent hits the sprite on top instead
-  // (so double-click → focus still works), and the DOM control buttons live
-  // outside the canvas entirely — neither reaches this layer.
-  const worldHitArea = useMemo(() => new Rectangle(0, 0, worldW, worldH), [worldW, worldH]);
-  const onCanvasPress = useCallback(() => {
-    if (isPip) window.dispatchEvent(new Event(PIP_EXPAND_REQUEST_EVENT));
-  }, [isPip]);
-
   useEffect(() => {
     if (!app || !isInitialised || !containerRef.current || !innerRef.current) return;
 
@@ -138,6 +128,21 @@ function SceneContent({
     vp.addChild(innerRef.current);
     app.stage.addChild(vp);
 
+    // PiP click-to-expand: the viewport already receives pointerdown on empty
+    // space (that's how drag-pan works) and bubbles sprite presses up with
+    // e.target set to the sprite. Ask the PiP window to expand for any press
+    // that did NOT land on an agent — agent presses must stay free so the
+    // double-click → focus works without a mid-gesture resize. DOM control
+    // buttons live outside the canvas and never reach here.
+    const onCanvasPointerDown = (e: FederatedPointerEvent) => {
+      for (let node: Container | null = e.target as Container | null; node && node !== vp; node = node.parent) {
+        if (node.label === AGENT_SPRITE_LABEL) return; // pressed an agent → let the sprite handle it
+      }
+      window.dispatchEvent(new Event(PIP_EXPAND_REQUEST_EVENT));
+    };
+    // Only the PiP window drives click-to-expand — never wire it into the main scene.
+    if (isPip) vp.on("pointerdown", onCanvasPointerDown);
+
     // Re-fit viewport when app resizes
     const onResize = () => {
       vp.resize(app.screen.width, app.screen.height, worldW, worldH);
@@ -151,13 +156,14 @@ function SceneContent({
 
     return () => {
       app.renderer?.off("resize", onResize);
+      vp.off("pointerdown", onCanvasPointerDown);
       if (innerRef.current && vp.children.includes(innerRef.current)) {
         vp.removeChild(innerRef.current);
       }
       vp.destroy({ children: false });
       viewportRef.current = null;
     };
-  }, [app, isInitialised, worldW, worldH, onViewportReady]);
+  }, [app, isInitialised, worldW, worldH, isPip, onViewportReady]);
 
   // When React adds new children (e.g. a new AgentSprite) to containerRef but
   // worldW/worldH haven't changed, the viewport effect doesn't re-run, leaving
@@ -177,13 +183,6 @@ function SceneContent({
   return (
     <pixiContainer ref={containerRef}>
       <pixiContainer ref={innerRef}>
-        {isPip && (
-          <pixiContainer
-            eventMode="static"
-            hitArea={worldHitArea}
-            onPointerDown={onCanvasPress}
-          />
-        )}
         <Tilemap theme={dynamicTheme} agentCount={agentList.length} />
         {agentList.map((agent, index) => {
           const slot = dynamicTheme.agentSlots[index % dynamicTheme.agentSlots.length];
@@ -254,8 +253,11 @@ export function AgentVilleScene({ isPip = false }: { isPip?: boolean }) {
   );
 
   const handleAgentDoubleClick = useCallback((id: string) => {
+    // Focusing the session blurs the PiP window; tell click-mode not to read
+    // that blur as a click-away and collapse.
+    if (isPip) window.dispatchEvent(new Event(PIP_SUPPRESS_COLLAPSE_EVENT));
     fetch(`/api/agents/${encodeURIComponent(id)}/focus`, { method: "POST" }).catch(() => {});
-  }, []);
+  }, [isPip]);
 
   const handleViewportReady = useCallback((vp: Viewport) => {
     (viewportInstanceRef as React.MutableRefObject<Viewport | null>).current = vp;

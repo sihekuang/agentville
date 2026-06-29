@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useAgentStore } from "@/store/agents";
 import { usePipExpand } from "@/hooks/usePipExpand";
 import { PIP_HOVER, type PipWindowResizer, type PipCursorProbe } from "@/lib/pip-resize";
-import { PIP_EXPAND_REQUEST_EVENT } from "@/lib/pip-types";
+import { PIP_EXPAND_REQUEST_EVENT, PIP_SUPPRESS_COLLAPSE_EVENT } from "@/lib/pip-types";
 
 function makeResizer() {
   return { name: "test", resize: vi.fn<(width: number, height: number) => void>() } satisfies PipWindowResizer;
@@ -42,6 +42,12 @@ function fireWindowBlur() {
 function fireExpandRequest() {
   act(() => {
     window.dispatchEvent(new Event(PIP_EXPAND_REQUEST_EVENT));
+  });
+}
+// The scene fires this right before focusing a session (agent double-click).
+function fireSuppressCollapse() {
+  act(() => {
+    window.dispatchEvent(new Event(PIP_SUPPRESS_COLLAPSE_EVENT));
   });
 }
 
@@ -160,6 +166,42 @@ describe("usePipExpand — click mode", () => {
     resizer.resize.mockClear();
     fireExpandRequest();           // already expanded → no change
     expect(resizer.resize).not.toHaveBeenCalled();
+  });
+
+  it("does not collapse on the blur caused by focusing a session (agent double-click)", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    fireExpandRequest();           // expand
+    resizer.resize.mockClear();
+    fireSuppressCollapse();        // double-click focuses the session…
+    fireWindowBlur();              // …which blurs the PiP window
+    expect(resizer.resize).not.toHaveBeenCalled(); // stays expanded
+  });
+
+  it("collapses on a genuine click-away blur after the suppression window is unused", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe }));
+    fireExpandRequest();           // expand
+    resizer.resize.mockClear();
+    fireWindowBlur();              // no preceding focus action → real click-away
+    expect(resizer.resize).toHaveBeenCalledWith(400, 300);
+  });
+
+  it("collapses via the injected blur subscription (Electron main-process blur)", () => {
+    const resizer = makeResizer();
+    const { probe } = makeProbe();
+    let fireInjectedBlur = () => {};
+    const subscribeWindowBlur = (onBlur: () => void) => {
+      fireInjectedBlur = onBlur;
+      return () => {};
+    };
+    renderHook(() => usePipExpand({ resizer, cursorProbe: probe, subscribeWindowBlur }));
+    fireExpandRequest();           // expand
+    resizer.resize.mockClear();
+    act(() => fireInjectedBlur());  // main-process blur relayed via IPC
+    expect(resizer.resize).toHaveBeenCalledWith(400, 300);
   });
 
   it("ignores blur while collapsed", () => {

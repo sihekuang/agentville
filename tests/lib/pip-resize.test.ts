@@ -68,6 +68,7 @@ function mockElectronAPI(): ElectronPipAPI {
     pipCursorBeyond: vi.fn(),
     onPipActivated: vi.fn(() => () => {}),
     onPipDeactivated: vi.fn(() => () => {}),
+    onPipBlur: vi.fn(() => () => {}),
   };
 }
 
