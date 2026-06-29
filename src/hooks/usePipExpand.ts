@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useAgentStore } from "@/store/agents";
-import { PIP_CONFIG } from "@/lib/pip-types";
+import {
+  PIP_CONFIG,
+  PIP_EXPAND_REQUEST_EVENT,
+  PIP_SUPPRESS_COLLAPSE_EVENT,
+  getElectronAPI,
+} from "@/lib/pip-types";
 import {
   PIP_HOVER,
   detectPipResizer,
@@ -14,11 +19,28 @@ import {
 } from "@/lib/pip-resize";
 import { pipDebug } from "@/lib/pip-debug";
 
+/** How long after a session-focus action to ignore the resulting blur. Covers
+ * the focus AppleScript latency without swallowing a later genuine click-away. */
+const BLUR_SUPPRESS_MS = 1500;
+
+/** Subscribe to "the PiP window lost focus" (a click-away). Prefers the Electron
+ * main-process blur — the renderer's DOM `window` blur does NOT fire on macOS
+ * app-switch for this floating panel — and falls back to DOM blur off Electron. */
+function defaultSubscribeWindowBlur(onBlur: () => void): () => void {
+  const api = getElectronAPI();
+  if (api?.onPipBlur) return api.onPipBlur(onBlur);
+  window.addEventListener("blur", onBlur);
+  return () => window.removeEventListener("blur", onBlur);
+}
+
 export interface UsePipExpandOptions {
   /** Inject a fake resizer in tests; defaults to the detected backend. */
   resizer?: PipWindowResizer;
   /** Inject a fake cursor probe in tests; defaults to the detected backend. */
   cursorProbe?: PipCursorProbe;
+  /** Inject the blur (click-away) subscription in tests; defaults to the
+   *  Electron main-process blur with a DOM-blur fallback. */
+  subscribeWindowBlur?: (onBlur: () => void) => () => void;
 }
 
 /**
@@ -39,7 +61,11 @@ export interface UsePipExpandOptions {
  * orphaned at the large size. Reads `pipExpandTrigger` / `pipExpandWidth`.
  */
 export function usePipExpand(options: UsePipExpandOptions = {}): void {
-  const { resizer: injectedResizer, cursorProbe: injectedProbe } = options;
+  const {
+    resizer: injectedResizer,
+    cursorProbe: injectedProbe,
+    subscribeWindowBlur = defaultSubscribeWindowBlur,
+  } = options;
   const trigger = useAgentStore((s) => s.pipExpandTrigger);
   const width = useAgentStore((s) => s.pipExpandWidth);
   const resizer = useMemo(
@@ -53,6 +79,10 @@ export function usePipExpand(options: UsePipExpandOptions = {}): void {
   const isExpanded = useRef(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchGen = useRef(0);
+  // Timestamp until which a blur-collapse is suppressed (set when the user
+  // activates a session from inside the PiP — that focus blurs us, but it is
+  // not a click-away). Generous enough to cover the focus AppleScript latency.
+  const suppressBlurUntil = useRef(0);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -93,17 +123,27 @@ export function usePipExpand(options: UsePipExpandOptions = {}): void {
     }
 
     if (trigger === "click") {
-      const onDown = () => {
+      // Expand only when the scene reports an empty-canvas press — NOT on a raw
+      // document pointerdown. Clicking an agent (double-click → focus) or a DOM
+      // control button must not resize the window mid-gesture, so those never
+      // emit PIP_EXPAND_REQUEST_EVENT (see AgentVilleScene's background hit layer).
+      const onExpandRequest = () => {
         if (!isExpanded.current) expand();
       };
+      const onSuppressCollapse = () => {
+        suppressBlurUntil.current = Date.now() + BLUR_SUPPRESS_MS;
+      };
       const onBlur = () => {
+        if (Date.now() < suppressBlurUntil.current) return; // focusing a session, not a click-away
         if (isExpanded.current) collapse(); // window lost focus → user clicked outside
       };
-      root.addEventListener("pointerdown", onDown);
-      window.addEventListener("blur", onBlur);
+      window.addEventListener(PIP_EXPAND_REQUEST_EVENT, onExpandRequest);
+      window.addEventListener(PIP_SUPPRESS_COLLAPSE_EVENT, onSuppressCollapse);
+      const unsubscribeBlur = subscribeWindowBlur(onBlur);
       return () => {
-        root.removeEventListener("pointerdown", onDown);
-        window.removeEventListener("blur", onBlur);
+        window.removeEventListener(PIP_EXPAND_REQUEST_EVENT, onExpandRequest);
+        window.removeEventListener(PIP_SUPPRESS_COLLAPSE_EVENT, onSuppressCollapse);
+        unsubscribeBlur();
         if (isExpanded.current) collapse(); // don't orphan a large window on mode switch
       };
     }
@@ -145,5 +185,5 @@ export function usePipExpand(options: UsePipExpandOptions = {}): void {
       root.removeEventListener("pointerenter", onEnter);
       if (isExpanded.current) collapse(); // don't orphan a large window on mode switch
     };
-  }, [trigger, width, resizer, cursorProbe]);
+  }, [trigger, width, resizer, cursorProbe, subscribeWindowBlur]);
 }

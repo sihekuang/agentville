@@ -10,6 +10,7 @@ const IPC = {
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
   PIP_CURSOR_BEYOND: "pip:cursor-beyond",
+  PIP_BLUR: "pip:blur",
 } as const;
 
 const PIP_WIDTH = 400;
@@ -77,6 +78,16 @@ export function setupPip({ getMainWindow, ensureMainWindow, getPort }: PipSetupO
     // while the user is dragging (see PIP_MOVE_SETTLE_MS).
     pipWindow.on("move", () => {
       lastMoveAt = Date.now();
+    });
+
+    // The renderer's DOM `window` blur is unreliable for this floating,
+    // all-workspaces panel on macOS (it doesn't fire on app switch), but the
+    // main-process blur does. Relay it so click-mode can collapse on click-away.
+    pipWindow.on("blur", () => {
+      pipLog("window BLUR (main) → notify renderer");
+      if (pipWindow && !pipWindow.isDestroyed()) {
+        pipWindow.webContents.send(IPC.PIP_BLUR);
+      }
     });
 
     const port = getPort();

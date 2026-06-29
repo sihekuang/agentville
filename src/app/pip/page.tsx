@@ -6,6 +6,7 @@ import { useAgentStream } from "@/hooks/use-agent-stream";
 import { usePip } from "@/hooks/usePip";
 import { usePipExpand } from "@/hooks/usePipExpand";
 import { PipHoverDebug } from "@/components/ui/PipHoverDebug";
+import { PIP_SUPPRESS_COLLAPSE_EVENT } from "@/lib/pip-types";
 
 const AgentVilleScene = dynamic(
   () =>
@@ -22,6 +23,11 @@ export default function PipPage() {
   const [isElectron, setIsElectron] = useState(false);
   useEffect(() => setIsElectron(backend === "electron"), [backend]);
 
+  // The titlebar controls intentionally move focus off the PiP (show main / close),
+  // which blurs this window. That is an in-PiP action, not a click-away, so tell
+  // click-mode not to collapse on the resulting blur.
+  const suppressCollapse = () => window.dispatchEvent(new Event(PIP_SUPPRESS_COLLAPSE_EVENT));
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-background relative">
       <PipHoverDebug />
@@ -34,20 +40,17 @@ export default function PipPage() {
           <div
             className="absolute top-1 right-1 z-20 flex gap-1"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            // Keep click-to-expand from firing on the control buttons (avoids an
-            // expand→collapse flash when clicking ↩/×, which then blur/close the window).
-            onPointerDown={(e) => e.stopPropagation()}
           >
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-              onClick={focusMain}
+              onClick={() => { suppressCollapse(); focusMain(); }}
               title="Show main window"
             >
               ↩
             </button>
             <button
               className="w-5 h-5 flex items-center justify-center text-xs rounded bg-card/80 backdrop-blur border border-border text-muted-foreground hover:text-destructive-foreground hover:bg-destructive transition-colors"
-              onClick={() => window.close()}
+              onClick={() => { suppressCollapse(); window.close(); }}
               title="Close PIP"
             >
               ×

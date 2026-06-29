@@ -173,7 +173,7 @@ export function SidePanel() {
                 {triggerActive && (
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                     {pipExpandTrigger === "click"
-                      ? `On click the PiP window grows to ${expanded.width} × ${expanded.height}px. Click outside to shrink back.`
+                      ? `Click the empty canvas to grow the PiP window to ${expanded.width} × ${expanded.height}px — clicking an agent or a button still works as usual. Click outside the window to shrink back.`
                       : `On hover the PiP window grows to ${expanded.width} × ${expanded.height}px. Leave to shrink back.`}
                   </p>
                 )}

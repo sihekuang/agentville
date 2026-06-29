@@ -10,6 +10,7 @@ const IPC = {
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
   PIP_CURSOR_BEYOND: "pip:cursor-beyond",
+  PIP_BLUR: "pip:blur",
 } as const;
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -28,5 +29,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const handler = () => callback();
     ipcRenderer.on(IPC.PIP_DEACTIVATED, handler);
     return () => { ipcRenderer.removeListener(IPC.PIP_DEACTIVATED, handler); };
+  },
+  onPipBlur: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on(IPC.PIP_BLUR, handler);
+    return () => { ipcRenderer.removeListener(IPC.PIP_BLUR, handler); };
   },
 });

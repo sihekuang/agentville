@@ -16,6 +16,7 @@ export const IPC = {
   PIP_DEACTIVATED: "pip:deactivated",
   PIP_RESIZE: "pip:resize",
   PIP_CURSOR_BEYOND: "pip:cursor-beyond",
+  PIP_BLUR: "pip:blur",
 } as const;
 
 export interface ElectronPipAPI {
@@ -26,6 +27,8 @@ export interface ElectronPipAPI {
   pipCursorBeyond: (outset: number) => Promise<boolean>;
   onPipActivated: (callback: () => void) => () => void;
   onPipDeactivated: (callback: () => void) => () => void;
+  /** Main-process window blur — reliable on macOS app switch, unlike DOM blur. */
+  onPipBlur: (callback: () => void) => () => void;
 }
 
 export function isElectron(): boolean {
@@ -40,3 +43,19 @@ export function getElectronAPI(): ElectronPipAPI | null {
 }
 
 export type PipBackend = "electron" | "browser";
+
+/**
+ * Window event the scene dispatches when the **empty canvas** (not an agent
+ * sprite, not a DOM button) is pressed in the PiP window. Click-mode expand
+ * listens for this instead of a raw document pointerdown, so clicking an agent
+ * (double-click → focus) or a control button never resizes the window mid-gesture.
+ */
+export const PIP_EXPAND_REQUEST_EVENT = "agentville:pip-expand-request";
+
+/**
+ * Window event the scene dispatches right before it activates another app's
+ * window (an agent double-click → focus its session). That focus blurs the PiP
+ * window, which click-mode would otherwise read as a click-away and collapse —
+ * so the hook suppresses the next blur-collapse briefly after this event.
+ */
+export const PIP_SUPPRESS_COLLAPSE_EVENT = "agentville:pip-suppress-collapse";
